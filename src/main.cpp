@@ -1,3 +1,10 @@
+/*
+ * main.cpp
+ *
+ * adaptations from Dear ImGUI example
+ * (c) 2022-2023 Robert Schöftner rs@unfoo.net
+ */
+
 // Dear ImGui: standalone example application for GLFW + OpenGL 3, using
 // programmable pipeline (GLFW is a cross-platform general purpose library for
 // handling windows, inputs, OpenGL/Vulkan/Metal graphics context creation,

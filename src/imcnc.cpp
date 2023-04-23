@@ -1,3 +1,9 @@
+/*
+ * imcnc.cpp
+ *
+ * (c) 2022-2023 Robert Schöftner rs@unfoo.net
+ */
+
 // clang-format off
 #include <signal.h>
 

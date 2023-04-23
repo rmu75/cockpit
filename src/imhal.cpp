@@ -1,3 +1,9 @@
+/*
+ * imhal.cpp
+ *
+ * (c) 2022-2023 Robert Schöftner rs@unfoo.net
+ */
+
 // clang-format off
 #include "hal.h"
 #include "../src/hal/hal_priv.h"
