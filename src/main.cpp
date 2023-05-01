@@ -23,6 +23,8 @@
 #endif
 #include <GLFW/glfw3.h> // Will drag system OpenGL headers
 
+#include <algorithm>
+
 static void glfw_error_callback(int error, const char* description)
 {
   fprintf(stderr, "Glfw Error %d: %s\n", error, description);
@@ -34,6 +36,75 @@ extern void ShowWindow();
 extern void initHAL();
 extern void ShowHAL();
 } // namespace ImCNC
+
+// https://stackoverflow.com/questions/47402766/switching-between-windowed-and-full-screen-in-opengl-glfw-3-2
+// https://stackoverflow.com/questions/21421074/how-to-create-a-full-screen-window-on-the-current-monitor-with-glfw
+
+GLFWmonitor* get_current_monitor(GLFWwindow* window)
+{
+  int nmonitors, i;
+  int wx, wy, ww, wh;
+  int mx, my, mw, mh;
+  int overlap, bestoverlap;
+
+  GLFWmonitor* bestmonitor;
+  GLFWmonitor** monitors;
+  const GLFWvidmode* mode;
+
+  bestoverlap = 0;
+  bestmonitor = NULL;
+
+  glfwGetWindowPos(window, &wx, &wy);
+  glfwGetWindowSize(window, &ww, &wh);
+  monitors = glfwGetMonitors(&nmonitors);
+
+  for (i = 0; i < nmonitors; i++) {
+    mode = glfwGetVideoMode(monitors[i]);
+    glfwGetMonitorPos(monitors[i], &mx, &my);
+    mw = mode->width;
+    mh = mode->height;
+
+    overlap = std::max(0, std::min(wx + ww, mx + mw) - std::max(wx, mx)) *
+              std::max(0, std::min(wy + wh, my + mh) - std::max(wy, my));
+
+    if (bestoverlap < overlap) {
+      bestoverlap = overlap;
+      bestmonitor = monitors[i];
+    }
+  }
+
+  return bestmonitor;
+}
+
+bool is_full_screen()
+{
+  auto window = glfwGetCurrentContext();
+  return glfwGetWindowMonitor(window) != nullptr;
+}
+
+void set_full_screen(bool fs)
+{
+  if (is_full_screen() == fs)
+    return; // nothing to do
+
+  auto window = glfwGetCurrentContext();
+  auto monitor = get_current_monitor(window);
+  static int _wnd_pos_x, _wnd_pos_y, _wnd_width, _wnd_height;
+
+  if (fs) {
+
+    // backup window pos and size
+    glfwGetWindowSize(window, &_wnd_width, &_wnd_height);
+    glfwGetWindowPos(window, &_wnd_pos_x, &_wnd_pos_y);
+
+    const auto mode = glfwGetVideoMode(monitor);
+
+    glfwSetWindowMonitor(window, monitor, 0, 0, mode->width, mode->height, 0);
+  }
+  else {
+    glfwSetWindowMonitor(window, nullptr, _wnd_pos_x, _wnd_pos_y, _wnd_width, _wnd_height, 0);
+  }
+}
 
 int main(int argc, char* argv[])
 {
@@ -103,6 +174,10 @@ int main(int argc, char* argv[])
   // Setup Platform/Renderer backends
   ImGui_ImplGlfw_InitForOpenGL(window, true);
   ImGui_ImplOpenGL3_Init(glsl_version);
+
+  // check GLFW monitors
+  int num_monitors;
+  GLFWmonitor** monitors = glfwGetMonitors(&num_monitors);
 
   // Load Fonts
   // - If no fonts are loaded, dear imgui will use the default font. You can
@@ -186,6 +261,7 @@ int main(int argc, char* argv[])
     {
       static float f = 0.0f;
       static int counter = 0;
+      static bool fullscreen = false;
 
       ImGui::Begin("Hello, world!"); // Create a window called "Hello, world!"
                                      // and append into it.
@@ -196,6 +272,8 @@ int main(int argc, char* argv[])
           "Demo Window",
           &show_demo_window); // Edit bools storing our window open/close state
       ImGui::Checkbox("Another Window", &show_another_window);
+      ImGui::Checkbox("Fullscreen", &fullscreen);
+      set_full_screen(fullscreen);
 
       ImGui::SliderFloat("float", &f, 0.0f,
                          1.0f); // Edit 1 float using a slider from 0.0f to 1.0f
@@ -208,6 +286,16 @@ int main(int argc, char* argv[])
         counter++;
       ImGui::SameLine();
       ImGui::Text("counter = %d", counter);
+
+      ImGui::Text("Monitors %d", num_monitors);
+      for (int i = 0; i < num_monitors; i++) {
+        int xp, yp, xpos, ypos, width, height;
+        float xscale, yscale;
+        glfwGetMonitorPos(monitors[i], &xp, &yp);
+        glfwGetMonitorContentScale(monitors[i], &xscale, &yscale);
+        glfwGetMonitorWorkarea(monitors[i], &xpos, &ypos, &width, &height);
+        ImGui::Text("Monitor %d %d %d %d %d %d %d %f %f ", i, xp, yp, xpos, ypos, width, height, xscale, yscale);
+      }
 
       ImGui::Text("Application average %.3f ms/frame (%.1f FPS)",
                   1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
