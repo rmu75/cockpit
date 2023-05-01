@@ -127,10 +127,25 @@ int main(int argc, char* argv[])
   // ImFont* font =
   // io.Fonts->AddFontFromFileTTF("c:\\Windows\\Fonts\\ArialUni.ttf", 18.0f,
   // NULL, io.Fonts->GetGlyphRangesJapanese()); IM_ASSERT(font != NULL);
-  io.Fonts->AddFontFromFileTTF("/usr/share/fonts/opentype/b612/B612-Regular.otf", 12);
-  io.Fonts->AddFontFromFileTTF("/usr/share/fonts/opentype/b612/B612-Regular.otf", 36);
-  io.Fonts->AddFontFromFileTTF("/usr/share/fonts/opentype/b612/B612Mono-Regular.otf", 12);
-  io.Fonts->AddFontFromFileTTF("/usr/share/fonts/opentype/b612/B612Mono-Regular.otf", 48);
+  ImVector<ImWchar> ranges;
+  ImFontGlyphRangesBuilder builder;
+  builder.AddRanges(io.Fonts->GetGlyphRangesDefault());
+  builder.AddChar(0xe007); // slashed zero
+  builder.AddChar(0x26a0); // warning sign
+  builder.AddChar(0x26a1); // high voltage
+  builder.BuildRanges(&ranges);
+
+  io.Fonts->AddFontFromFileTTF("/usr/share/fonts/opentype/b612/B612-Regular.otf", 18, nullptr, ranges.Data);
+  io.Fonts->AddFontFromFileTTF("/usr/share/fonts/opentype/b612/B612-Regular.otf", 36, nullptr, ranges.Data);
+  io.Fonts->AddFontFromFileTTF("/usr/share/fonts/opentype/b612/B612Mono-Regular.otf", 12, nullptr, ranges.Data);
+  io.Fonts->AddFontFromFileTTF("/usr/share/fonts/opentype/b612/B612Mono-Regular.otf", 48, nullptr, ranges.Data);
+  io.Fonts->AddFontFromFileTTF("/usr/share/fonts/opentype/b612/B612-Regular.otf", 48, nullptr, ranges.Data);
+
+  // remap slashed zero to zero
+  io.Fonts->Build();
+  for (auto& font : io.Fonts->Fonts) {
+    font->AddRemapChar(0x0030, 0xe007, true);
+  }
 
   // Our state
   bool show_demo_window = true;
