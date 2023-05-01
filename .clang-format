@@ -31,7 +31,6 @@ BraceWrapping:
   AfterEnum:       false
   AfterFunction:   true
   AfterNamespace:  false
-  AfterObjCDeclaration: false
   AfterStruct:     true
   AfterUnion:      true
   AfterExternBlock: false
@@ -85,10 +84,6 @@ MacroBlockBegin: ''
 MacroBlockEnd:   ''
 MaxEmptyLinesToKeep: 1
 NamespaceIndentation: None
-ObjCBinPackProtocolList: Auto
-ObjCBlockIndentWidth: 2
-ObjCSpaceAfterProperty: false
-ObjCSpaceBeforeProtocolList: true
 PenaltyBreakAssignment: 2
 PenaltyBreakBeforeFirstCallParameter: 19
 PenaltyBreakComment: 300
@@ -124,4 +119,3 @@ StatementMacros:
 TabWidth:        8
 UseTab:          Never
 ...
-
