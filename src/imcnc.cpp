@@ -523,6 +523,7 @@ void ShowWindow()
                 emcStatus->motion.traj.tag.fields_float[3]);
     ImGui::Text("naive CAM tolerance: %f",
                 emcStatus->motion.traj.tag.fields_float[4]);
+    ImGui::Text("filename %s", emcStatus->motion.traj.tag.filename);
   }
   ImGui::End();
 
