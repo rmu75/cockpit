@@ -87,7 +87,7 @@ static std::string get_name_level(const char* name, unsigned level)
 
 void ShowHAL()
 {
-  ImGui::Begin("HAL Pins");
+  ImGui::Begin("HAL");
   // get mutex
   rtapi_mutex_get(&(hal_data->mutex));
 
@@ -145,10 +145,12 @@ void ShowHAL()
       }
 
       void* value_ptr;
+      const char* signame = "";
 
       if (pin->signal) {
         hal_sig_t* sig = static_cast<hal_sig_t*>(SHMPTR(pin->signal));
         value_ptr = SHMPTR(sig->data_ptr);
+        signame = sig->name;
       }
       else
         value_ptr = &(pin->dummysig);
@@ -156,19 +158,20 @@ void ShowHAL()
       if (disp) {
         switch (pin->type) {
         case HAL_BIT:
-          ImGui::Text("%d %s[bit]: %d", slv, name,
-                      *static_cast<char*>(value_ptr));
+          ImGui::Text("%s[bit] %s: %s", name, signame,
+                      (*static_cast<char*>(value_ptr)) ? "☒" : "☐");
+          // ImGui::RadioButton(name, *static_cast<char*>(value_ptr));
           break;
         case HAL_S32:
-          ImGui::Text("%d %s[s32]: %d", slv, name,
+          ImGui::Text("%s[s32] %s: %d", name, signame,
                       *static_cast<int*>(value_ptr));
           break;
         case HAL_U32:
-          ImGui::Text("%d %s[u32]: %d", slv, name,
+          ImGui::Text("%s[u32] %s: %d", name, signame,
                       *static_cast<unsigned*>(value_ptr));
           break;
         case HAL_FLOAT:
-          ImGui::Text("%d %s[f64]: %f", slv, name,
+          ImGui::Text("%s[f64] %s: %f", name, signame,
                       *static_cast<double*>(value_ptr));
           break;
         default:
@@ -216,7 +219,8 @@ void ShowHAL()
 
       const char* name = "";
       auto lv = calc_level(param->name, name);
-      auto slv = calc_level_diff(param->name, last_param ? last_param->name : "");
+      auto slv =
+          calc_level_diff(param->name, last_param ? last_param->name : "");
 
       // unindent llv - slv levels
       while (llv > slv) {
@@ -245,8 +249,9 @@ void ShowHAL()
       if (disp) {
         switch (param->type) {
         case HAL_BIT:
-          ImGui::Text("%d %s[bit]: %d", slv, name,
-                      *static_cast<char*>(value_ptr));
+          // ImGui::Text("%d %s[bit]: %d", slv, name,
+          //            *static_cast<char*>(value_ptr));
+          ImGui::RadioButton(name, *static_cast<char*>(value_ptr));
           break;
         case HAL_S32:
           ImGui::Text("%d %s[s32]: %d", slv, name,
@@ -305,7 +310,8 @@ void ShowHAL()
     while (next != 0) {
       hal_thread_t* thread = static_cast<hal_thread_t*>(SHMPTR(next));
 
-      ImGui::Text("%s(%d) %ld(%d) ", thread->name, thread->task_id, thread->period, thread->priority);
+      ImGui::Text("%s(%d) %ld(%d) ", thread->name, thread->task_id,
+                  thread->period, thread->priority);
 
       next = thread->next_ptr;
     }

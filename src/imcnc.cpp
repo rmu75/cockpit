@@ -321,7 +321,7 @@ void ShowWindow()
   ImGui::End();
 
   if (ImGui::Begin("Probe")) {
-    ImGui::PushFont(io.Fonts->Fonts[1]);
+    ImGui::PushFont(io.Fonts->Fonts[2]);
     if (emcStatus->motion.traj.axis_mask & 1)
       ImGui::Text("X %9.3f", emcStatus->motion.traj.probedPosition.tran.x);
     if (emcStatus->motion.traj.axis_mask & 2)

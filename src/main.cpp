@@ -205,9 +205,16 @@ int main(int argc, char* argv[])
   ImVector<ImWchar> ranges;
   ImFontGlyphRangesBuilder builder;
   builder.AddRanges(io.Fonts->GetGlyphRangesDefault());
-  builder.AddChar(0xe007); // slashed zero
+  builder.AddChar(0x2610); // empty box
+  builder.AddChar(0x2612); // box with x
   builder.AddChar(0x26a0); // warning sign
   builder.AddChar(0x26a1); // high voltage
+  builder.AddChar(0xe007); // slashed zero
+  builder.AddChar(0xe084); // play
+  builder.AddChar(0xe086); // pause
+  builder.AddChar(0xe087); // stop
+  builder.AddChar(0xe08d); // next
+  builder.AddChar(0xe08e); // standby
   builder.BuildRanges(&ranges);
 
   io.Fonts->AddFontFromFileTTF(
