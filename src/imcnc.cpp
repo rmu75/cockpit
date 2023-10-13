@@ -796,6 +796,173 @@ void ShowWindow()
 
   bool show_log_window = true;
   ShowLogWindow(&show_log_window);
-} // namespace ImCNC
+}
+
+void RightJustifiedText(const char* text)
+{
+  auto posX = (ImGui::GetCursorPosX() + ImGui::GetColumnWidth() -
+               ImGui::CalcTextSize(text).x - ImGui::GetScrollX() -
+               2 * ImGui::GetStyle().ItemSpacing.x);
+  if (posX > ImGui::GetCursorPosX())
+    ImGui::SetCursorPosX(posX);
+  ImGui::Text("%s", text);
+}
+
+void ShowStatusWindow()
+{
+  updateStatus();
+  ImGuiIO& io = ImGui::GetIO();
+
+  constexpr char format_metric[] = "%9.3f";
+  constexpr char format_imperial[] = "%8.4f";
+
+  bool position_display_metric = true;
+  bool position_display_actual = true;
+
+  if (ImGui::Begin("Status Window")) {
+    ImGui::BeginChild("ch1", ImVec2(ImGui::GetContentRegionAvail().x * 0.60f, 0), false, ImGuiWindowFlags_HorizontalScrollbar);
+    if (ImGui::BeginTable("##position_table", 3,
+                          ImGuiTableFlags_RowBg))
+    {
+      ImGui::TableSetupColumn("WCS", ImGuiTableColumnFlags_WidthFixed);
+      if (position_display_metric) {
+        ImGui::TableSetupColumn("Position [mm]");
+        ImGui::TableSetupColumn("Dist-to-go [mm]");
+      }
+      else {
+        ImGui::TableSetupColumn("Position [in]");
+        ImGui::TableSetupColumn("Dist-to-go [in]");
+      }
+      ImGui::TableHeadersRow();
+
+      ImGui::PushFont(io.Fonts->Fonts[4]);
+
+      static const ImVec4 color1 = ImColor::HSV(1 / 7.f, 0.6f, 0.6f);
+      static const ImVec4 color2 = ImColor::HSV(2 / 7.f, 0.6f, 0.6f);
+      static const ImVec4 color3 = ImColor::HSV(0 / 7.f, 0.6f, 0.6f);
+
+      const auto& traj = emcStatus->motion.traj;
+      struct
+      {
+        const bool active;
+        const char* label;
+        const double cmd, act, dtg;
+      } axis_values[] = {{(traj.axis_mask & 1) != 0, "X", traj.position.tran.x,
+                          traj.actualPosition.tran.x, traj.dtg.tran.x},
+                         {(traj.axis_mask & 2) != 0, "Y", traj.position.tran.y,
+                          traj.actualPosition.tran.y, traj.dtg.tran.y},
+                         {(traj.axis_mask & 4) != 0, "Z", traj.position.tran.z,
+                          traj.actualPosition.tran.z, traj.dtg.tran.z},
+                         {(traj.axis_mask & 8) != 0, "A", traj.position.a,
+                          traj.actualPosition.a, traj.dtg.a},
+                         {(traj.axis_mask & 16) != 0, "B", traj.position.b,
+                          traj.actualPosition.b, traj.dtg.b},
+                         {(traj.axis_mask & 32) != 0, "C", traj.position.c,
+                          traj.actualPosition.c, traj.dtg.c},
+                         {(traj.axis_mask & 64) != 0, "U", traj.position.u,
+                          traj.actualPosition.u, traj.dtg.u},
+                         {(traj.axis_mask & 128) != 0, "V", traj.position.v,
+                          traj.actualPosition.v, traj.dtg.v},
+                         {(traj.axis_mask & 256) != 0, "W", traj.position.w,
+                          traj.actualPosition.w, traj.dtg.w}};
+
+      for (const auto& axis : axis_values) {
+        if (axis.active) {
+          ImGui::TableNextRow();
+          ImGui::TableNextColumn();
+          ImGui::TextUnformatted(axis.label);
+          ImGui::TableNextColumn();
+          if (position_display_metric) {
+            char buf[16];
+            snprintf(buf, sizeof(buf), format_metric,
+                     position_display_actual ? axis.act : axis.cmd);
+            RightJustifiedText(buf);
+          }
+          else {
+            char buf[16];
+            snprintf(buf, sizeof(buf), format_imperial,
+                     (position_display_actual ? axis.act : axis.cmd) *
+                         INCH_PER_MM);
+            RightJustifiedText(buf);
+          }
+          ImGui::PushStyleColor(ImGuiCol_Text, color3);
+          ImGui::TableNextColumn();
+          if (position_display_metric) {
+            char buf[16];
+            snprintf(buf, sizeof(buf), format_metric, axis.dtg);
+            RightJustifiedText(buf);
+          }
+          else {
+            char buf[16];
+            snprintf(buf, sizeof(buf), format_imperial, axis.dtg * INCH_PER_MM);
+            RightJustifiedText(buf);
+          }
+          ImGui::PopStyleColor(1);
+        }
+      }
+
+      ImGui::PopFont();
+      ImGui::EndTable();
+    }
+    ImGui::EndChild();
+    ImGui::SameLine();
+
+    ImGui::BeginChild("ch2");
+    if (ImGui::BeginTable("##tfstable", 3,
+                          ImGuiTableFlags_RowBg |
+                              ImGuiTableFlags_BordersInnerV))
+    {
+      ImGui::TableSetupColumn("T,F,S", ImGuiTableColumnFlags_WidthFixed);
+      if (position_display_metric) {
+        ImGui::TableSetupColumn("");
+      }
+
+      ImGui::TableHeadersRow();
+
+      // Tool
+      ImGui::TableNextRow();
+      ImGui::TableNextColumn();
+      ImGui::PushFont(io.Fonts->Fonts[4]);
+      ImGui::Text("T");
+      ImGui::TableNextColumn();
+      ImGui::Text("%d", emcStatus->io.tool.toolInSpindle);
+      ImGui::PopFont();
+      //auto& tool = emcStatus->io.tool.toolTablecurrent
+      ImGui::TableNextColumn();
+      //auto& tool = emcStatus->io.tool.toolTable[emcStatus->io.tool.toolInSpindle];
+      auto& tool = emcStatus->io.tool.toolTable[0];
+
+      ImGui::Text("D %.3fmm", tool.diameter);
+      ImGui::Text("L %.3fmm", tool.offset.tran.z);
+
+      // Feedrate
+      ImGui::TableNextRow();
+      ImGui::TableNextColumn();
+      ImGui::PushFont(io.Fonts->Fonts[4]);
+      ImGui::Text("F");
+      ImGui::TableNextColumn();
+      ImGui::Text("%.0f", emcStatus->motion.traj.tag.fields_float[1]);
+      ImGui::PopFont();
+      ImGui::TableNextColumn();
+      ImGui::Text("%.0f", emcStatus->motion.traj.current_vel * 60);
+      ImGui::Text("mm/min");
+
+      // Spindle
+      ImGui::TableNextRow();
+      ImGui::TableNextColumn();
+      ImGui::PushFont(io.Fonts->Fonts[4]);
+      ImGui::Text("S");
+      ImGui::TableNextColumn();
+      ImGui::Text("%.0f", emcStatus->motion.traj.tag.fields_float[2]);
+      ImGui::PopFont();
+      ImGui::TableNextColumn();
+      ImGui::Text("%.0f", emcStatus->motion.spindle[0].speed);
+
+      ImGui::EndTable();
+    }
+    ImGui::EndChild();
+  }
+  ImGui::End();
+}
 
 } // namespace ImCNC

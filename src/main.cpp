@@ -33,6 +33,7 @@ static void glfw_error_callback(int error, const char* description)
 namespace ImCNC {
 extern int init(int argc, char* argv[]);
 extern void ShowWindow();
+extern void ShowStatusWindow();
 extern void initHAL();
 extern void ShowHAL();
 } // namespace ImCNC
@@ -254,6 +255,7 @@ int main(int argc, char* argv[])
       ImGui::ShowDemoWindow(&show_demo_window);
 
     ImCNC::ShowWindow();
+    ImCNC::ShowStatusWindow();
     ImCNC::ShowHAL();
 
     // 2. Show a simple window that we create ourselves. We use a Begin/End pair
