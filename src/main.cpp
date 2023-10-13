@@ -22,7 +22,6 @@
 #include <GLES2/gl2.h>
 #endif
 #include <GLFW/glfw3.h> // Will drag system OpenGL headers
-
 #include <algorithm>
 
 static void glfw_error_callback(int error, const char* description)
@@ -103,7 +102,8 @@ void set_full_screen(bool fs)
     glfwSetWindowMonitor(window, monitor, 0, 0, mode->width, mode->height, 0);
   }
   else {
-    glfwSetWindowMonitor(window, nullptr, _wnd_pos_x, _wnd_pos_y, _wnd_width, _wnd_height, 0);
+    glfwSetWindowMonitor(window, nullptr, _wnd_pos_x, _wnd_pos_y, _wnd_width,
+                         _wnd_height, 0);
   }
 }
 
@@ -122,28 +122,27 @@ int main(int argc, char* argv[])
 
     // Decide GL+GLSL versions
 #if defined(IMGUI_IMPL_OPENGL_ES2)
-    // GL ES 2.0 + GLSL 100
-    const char* glsl_version = "#version 100";
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 2);
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 0);
-    glfwWindowHint(GLFW_CLIENT_API, GLFW_OPENGL_ES_API);
+  // GL ES 2.0 + GLSL 100
+  const char* glsl_version = "#version 100";
+  glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 2);
+  glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 0);
+  glfwWindowHint(GLFW_CLIENT_API, GLFW_OPENGL_ES_API);
 #else
-    // GL 3.0 + GLSL 130
-    const char* glsl_version = "#version 130";
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 2);
-    // glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);  // 3.2+
-    // only glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE); // 3.0+ only
+  // GL 3.0 + GLSL 130
+  const char* glsl_version = "#version 130";
+  glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
+  glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 2);
+  // glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);  // 3.2+
+  // only glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE); // 3.0+ only
 #endif
 
   // Create window with graphics context
-  GLFWwindow* window = glfwCreateWindow(
-      1024, 600, "LinuxCNC rµ copilot", nullptr, nullptr);
+  GLFWwindow* window =
+      glfwCreateWindow(1024, 600, "LinuxCNC rµ copilot", nullptr, nullptr);
   if (window == nullptr)
     return 1;
   glfwMakeContextCurrent(window);
   glfwSwapInterval(1); // Enable vsync
-
 
   // Setup Dear ImGui context
   IMGUI_CHECKVERSION();
@@ -154,8 +153,8 @@ int main(int argc, char* argv[])
       ImGuiConfigFlags_NavEnableKeyboard; // Enable Keyboard Controls
   io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad; // Enable Gamepad
   // Controls
-  io.ConfigFlags |= ImGuiConfigFlags_DockingEnable; // Enable Docking
-  io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;         // Enable
+  io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;   // Enable Docking
+  io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable; // Enable
   // Multi-Viewport / Platform Windows io.ConfigViewportsNoAutoMerge = true;
   // io.ConfigViewportsNoTaskBarIcon = true;
 
@@ -211,11 +210,21 @@ int main(int argc, char* argv[])
   builder.AddChar(0x26a1); // high voltage
   builder.BuildRanges(&ranges);
 
-  io.Fonts->AddFontFromFileTTF("/usr/share/fonts/opentype/b612/B612-Regular.otf", 18, nullptr, ranges.Data);
-  io.Fonts->AddFontFromFileTTF("/usr/share/fonts/opentype/b612/B612-Regular.otf", 36, nullptr, ranges.Data);
-  io.Fonts->AddFontFromFileTTF("/usr/share/fonts/opentype/b612/B612Mono-Regular.otf", 12, nullptr, ranges.Data);
-  io.Fonts->AddFontFromFileTTF("/usr/share/fonts/opentype/b612/B612Mono-Regular.otf", 48, nullptr, ranges.Data);
-  io.Fonts->AddFontFromFileTTF("/usr/share/fonts/opentype/b612/B612-Regular.otf", 48, nullptr, ranges.Data);
+  io.Fonts->AddFontFromFileTTF(
+      "/usr/share/fonts/opentype/b612/B612-Regular.otf", 18, nullptr,
+      ranges.Data);
+  io.Fonts->AddFontFromFileTTF(
+      "/usr/share/fonts/opentype/b612/B612-Regular.otf", 36, nullptr,
+      ranges.Data);
+  io.Fonts->AddFontFromFileTTF(
+      "/usr/share/fonts/opentype/b612/B612Mono-Regular.otf", 12, nullptr,
+      ranges.Data);
+  io.Fonts->AddFontFromFileTTF(
+      "/usr/share/fonts/opentype/b612/B612Mono-Regular.otf", 48, nullptr,
+      ranges.Data);
+  io.Fonts->AddFontFromFileTTF(
+      "/usr/share/fonts/opentype/b612/B612-Regular.otf", 48, nullptr,
+      ranges.Data);
 
   // remap slashed zero to zero
   io.Fonts->Build();
@@ -296,7 +305,8 @@ int main(int argc, char* argv[])
         glfwGetMonitorPos(monitors[i], &xp, &yp);
         glfwGetMonitorContentScale(monitors[i], &xscale, &yscale);
         glfwGetMonitorWorkarea(monitors[i], &xpos, &ypos, &width, &height);
-        ImGui::Text("Monitor %d %d %d %d %d %d %d %f %f ", i, xp, yp, xpos, ypos, width, height, xscale, yscale);
+        ImGui::Text("Monitor %d %d %d %d %d %d %d %f %f ", i, xp, yp, xpos,
+                    ypos, width, height, xscale, yscale);
       }
 
       ImGui::Text("Application average %.3f ms/frame (%.1f FPS)",
