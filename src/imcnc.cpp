@@ -9,6 +9,7 @@
 #include <fstream>
 #include <streambuf>
 #include <iostream>
+#include <string>
 
 #include "imgui.h"
 #include "TextEditor.h"
@@ -16,14 +17,14 @@
 
 #define TOOL_NML
 
-#include "rcs.hh"
-#include "posemath.h" // PM_POSE, TO_RAD
-#include "emc.hh"     // EMC NML
 #include "canon.hh"   // CANON_UNITS, CANON_UNITS_INCHES,MM,CM
-#include "emcglb.h"   // EMC_NMLFILE, TRAJ_MAX_VELOCITY, etc.
-#include "emccfg.h"   // DEFAULT_TRAJ_MAX_VELOCITY
-#include "inifile.hh" // INIFILE
 #include "config.h"   // Standard path definitions
+#include "emc.hh"     // EMC NML
+#include "emccfg.h"   // DEFAULT_TRAJ_MAX_VELOCITY
+#include "emcglb.h"   // EMC_NMLFILE, TRAJ_MAX_VELOCITY, etc.
+#include "inifile.hh" // INIFILE
+#include "posemath.h" // PM_POSE, TO_RAD
+#include "rcs.hh"
 #include "rcs_print.hh"
 #include "shcom.hh"
 
@@ -31,10 +32,9 @@ namespace ImCNC {
 
 int quitting = 0;
 
-static void sigQuit(int sig)
-{
-  quitting = 1;
-}
+static void sigQuit(int sig) { quitting = 1; }
+
+static ShCom emc;
 
 int init(int argc, char* argv[])
 {
@@ -43,18 +43,19 @@ int init(int argc, char* argv[])
     rcs_print_error("error in argument list\n");
     exit(1);
   }
+
   // get configuration information
-  iniLoad(emc_inifile);
+  emc.ini_load(emc_inifile);
   // init NML
-  if (tryNml() != 0) {
+  if (emc.try_nml() != 0) {
     rcs_print_error("can't connect to emc\n");
     // thisQuit();
     exit(1);
   }
   // get current serial number, and save it for restoring when we quit
   // so as not to interfere with real operator interface
-  updateStatus();
-  emcCommandSerialNumber = emcStatus->echo_serial_number;
+  emc.update_status();
+  // emcCommandSerialNumber = emc.status().echo_serial_number;
 
   // attach our quit function to SIGINT
   signal(SIGTERM, sigQuit);
@@ -200,15 +201,15 @@ struct LogWindow
 static void ShowLogWindow(bool* p_open)
 {
   static LogWindow log;
-  auto res = updateError();
+  auto res = emc.update_error();
 
   if (res == 0) {
-    if (*error_string)
-      log.AddLog("%s\n", error_string);
-    if (*operator_text_string)
-      log.AddLog("%s\n", operator_text_string);
-    *error_string = 0;
-    *operator_text_string = 0;
+    if (error_string.length() > 0)
+      log.AddLog("%s\n", error_string.c_str());
+    if (operator_text_string.length() > 0)
+      log.AddLog("%s\n", operator_text_string.c_str());
+    error_string.clear();
+    operator_text_string.clear();
   }
 
   // For the demo: add a debug button _BEFORE_ the normal log window contents
@@ -229,31 +230,30 @@ static void ShowLogWindow(bool* p_open)
 
 void ShowWindow()
 {
-  updateStatus();
+  emc.update_status();
   ImGuiIO& io = ImGui::GetIO();
+  const auto& traj = emc.status().motion.traj;
 
   if (ImGui::Begin("Traj Status")) {
-    ImGui::Text("linear units: %f", emcStatus->motion.traj.linearUnits);
-    ImGui::Text("angular units: %f", emcStatus->motion.traj.angularUnits);
-    ImGui::Text("cycle time: %f", emcStatus->motion.traj.cycleTime);
-    ImGui::Text("joints: %d", emcStatus->motion.traj.joints);
-    ImGui::Text("scale: %f", emcStatus->motion.traj.scale);
-    ImGui::Text("rapid scale: %f", emcStatus->motion.traj.rapid_scale);
-    ImGui::Text("spindles: %d", emcStatus->motion.traj.spindles);
-    ImGui::Text("acceleration: %9.3f", emcStatus->motion.traj.acceleration);
-    ImGui::Text("velocity: %9.3f", emcStatus->motion.traj.velocity);
-    ImGui::Text("distance to go: %9.3f", emcStatus->motion.traj.distance_to_go);
-    ImGui::Text("current velocity: %9.3f", emcStatus->motion.traj.current_vel);
-    ImGui::Text("queue: %d activeQueue: %d full: %d id: %d",
-                emcStatus->motion.traj.queue,
-                emcStatus->motion.traj.activeQueue,
-                emcStatus->motion.traj.queueFull, emcStatus->motion.traj.id);
-    ImGui::Text("motion type %d", emcStatus->motion.traj.motion_type);
-    if (emcStatus->motion.traj.feed_override_enabled)
+    ImGui::Text("linear units: %f", traj.linearUnits);
+    ImGui::Text("angular units: %f", traj.angularUnits);
+    ImGui::Text("cycle time: %f", traj.cycleTime);
+    ImGui::Text("joints: %d", traj.joints);
+    ImGui::Text("scale: %f", traj.scale);
+    ImGui::Text("rapid scale: %f", traj.rapid_scale);
+    ImGui::Text("spindles: %d", traj.spindles);
+    ImGui::Text("acceleration: %9.3f", traj.acceleration);
+    ImGui::Text("velocity: %9.3f", traj.velocity);
+    ImGui::Text("distance to go: %9.3f", traj.distance_to_go);
+    ImGui::Text("current velocity: %9.3f", traj.current_vel);
+    ImGui::Text("queue: %d activeQueue: %d full: %d id: %d", traj.queue,
+                traj.activeQueue, traj.queueFull, traj.id);
+    ImGui::Text("motion type %d", traj.motion_type);
+    if (traj.feed_override_enabled)
       ImGui::Text("feed override");
-    if (emcStatus->motion.traj.adaptive_feed_enabled)
+    if (traj.adaptive_feed_enabled)
       ImGui::Text("adaptive feed");
-    if (emcStatus->motion.traj.feed_hold_enabled)
+    if (traj.feed_hold_enabled)
       ImGui::Text("feed hold");
   }
   ImGui::End();
@@ -275,7 +275,6 @@ void ShowWindow()
       ImVec4 color2 = ImColor::HSV(2 / 7.f, 0.6f, 0.6f);
       ImVec4 color3 = ImColor::HSV(0 / 7.f, 0.6f, 0.6f);
 
-      const auto& traj = emcStatus->motion.traj;
       struct
       {
         const bool active;
@@ -326,54 +325,56 @@ void ShowWindow()
 
   if (ImGui::Begin("Probe")) {
     ImGui::PushFont(io.Fonts->Fonts[2]);
-    if (emcStatus->motion.traj.axis_mask & 1)
-      ImGui::Text("X %9.3f", emcStatus->motion.traj.probedPosition.tran.x);
-    if (emcStatus->motion.traj.axis_mask & 2)
-      ImGui::Text("Y %9.3f", emcStatus->motion.traj.probedPosition.tran.y);
-    if (emcStatus->motion.traj.axis_mask & 4)
-      ImGui::Text("Z %9.3f", emcStatus->motion.traj.probedPosition.tran.z);
-    if (emcStatus->motion.traj.axis_mask & 8)
-      ImGui::Text("A %9.3f", emcStatus->motion.traj.probedPosition.a);
-    if (emcStatus->motion.traj.axis_mask & 16)
-      ImGui::Text("B %9.3f", emcStatus->motion.traj.probedPosition.b);
-    if (emcStatus->motion.traj.axis_mask & 32)
-      ImGui::Text("C %9.3f", emcStatus->motion.traj.probedPosition.c);
-    if (emcStatus->motion.traj.axis_mask & 64)
-      ImGui::Text("U %9.3f", emcStatus->motion.traj.probedPosition.u);
-    if (emcStatus->motion.traj.axis_mask & 128)
-      ImGui::Text("V %9.3f", emcStatus->motion.traj.probedPosition.v);
-    if (emcStatus->motion.traj.axis_mask & 256)
-      ImGui::Text("W %9.3f", emcStatus->motion.traj.probedPosition.w);
-    ImGui::Text("probe val: %d", emcStatus->motion.traj.probeval);
-    if (emcStatus->motion.traj.probing)
+    const auto& pos = traj.probedPosition;
+    if (traj.axis_mask & 1)
+      ImGui::Text("X %9.3f", pos.tran.x);
+    if (traj.axis_mask & 2)
+      ImGui::Text("Y %9.3f", pos.tran.y);
+    if (traj.axis_mask & 4)
+      ImGui::Text("Z %9.3f", pos.tran.z);
+    if (traj.axis_mask & 8)
+      ImGui::Text("A %9.3f", pos.a);
+    if (traj.axis_mask & 16)
+      ImGui::Text("B %9.3f", pos.b);
+    if (traj.axis_mask & 32)
+      ImGui::Text("C %9.3f", pos.c);
+    if (traj.axis_mask & 64)
+      ImGui::Text("U %9.3f", pos.u);
+    if (traj.axis_mask & 128)
+      ImGui::Text("V %9.3f", pos.v);
+    if (traj.axis_mask & 256)
+      ImGui::Text("W %9.3f", traj.probedPosition.w);
+    ImGui::Text("probe val: %d", traj.probeval);
+    if (traj.probing)
       ImGui::Text("probing");
-    if (emcStatus->motion.traj.probe_tripped)
+    if (traj.probe_tripped)
       ImGui::Text("probe tripped");
     ImGui::PopFont();
   }
   ImGui::End();
 
   if (ImGui::Begin("External Offset")) {
+    const auto& eoffset_pose = emc.status().motion.eoffset_pose;
     ImGui::PushFont(io.Fonts->Fonts[1]);
-    if (emcStatus->motion.traj.axis_mask & 1)
-      ImGui::Text("X %9.3f", emcStatus->motion.eoffset_pose.tran.x);
-    if (emcStatus->motion.traj.axis_mask & 2)
-      ImGui::Text("Y %9.3f", emcStatus->motion.eoffset_pose.tran.y);
-    if (emcStatus->motion.traj.axis_mask & 4)
-      ImGui::Text("Z %9.3f", emcStatus->motion.eoffset_pose.tran.z);
-    if (emcStatus->motion.traj.axis_mask & 8)
-      ImGui::Text("A %9.3f", emcStatus->motion.eoffset_pose.a);
-    if (emcStatus->motion.traj.axis_mask & 16)
-      ImGui::Text("B %9.3f", emcStatus->motion.eoffset_pose.b);
-    if (emcStatus->motion.traj.axis_mask & 32)
-      ImGui::Text("C %9.3f", emcStatus->motion.eoffset_pose.c);
-    if (emcStatus->motion.traj.axis_mask & 64)
-      ImGui::Text("U %9.3f", emcStatus->motion.eoffset_pose.u);
-    if (emcStatus->motion.traj.axis_mask & 128)
-      ImGui::Text("V %9.3f", emcStatus->motion.eoffset_pose.v);
-    if (emcStatus->motion.traj.axis_mask & 256)
-      ImGui::Text("W %9.3f", emcStatus->motion.eoffset_pose.w);
-    if (emcStatus->motion.external_offsets_applied)
+    if (traj.axis_mask & 1)
+      ImGui::Text("X %9.3f", eoffset_pose.tran.x);
+    if (traj.axis_mask & 2)
+      ImGui::Text("Y %9.3f", eoffset_pose.tran.y);
+    if (traj.axis_mask & 4)
+      ImGui::Text("Z %9.3f", eoffset_pose.tran.z);
+    if (traj.axis_mask & 8)
+      ImGui::Text("A %9.3f", eoffset_pose.a);
+    if (traj.axis_mask & 16)
+      ImGui::Text("B %9.3f", eoffset_pose.b);
+    if (traj.axis_mask & 32)
+      ImGui::Text("C %9.3f", eoffset_pose.c);
+    if (traj.axis_mask & 64)
+      ImGui::Text("U %9.3f", eoffset_pose.u);
+    if (traj.axis_mask & 128)
+      ImGui::Text("V %9.3f", eoffset_pose.v);
+    if (traj.axis_mask & 256)
+      ImGui::Text("W %9.3f", eoffset_pose.w);
+    if (emc.status().motion.external_offsets_applied)
       ImGui::Text("external offsets applied");
     ImGui::PopFont();
   }
@@ -381,8 +382,8 @@ void ShowWindow()
 
   if (ImGui::Begin("Joints")) {
     ImGui::PushFont(io.Fonts->Fonts[3]);
-    for (unsigned index = 0; index < emcStatus->motion.traj.joints; index++) {
-      auto& joint = emcStatus->motion.joint[index];
+    for (unsigned index = 0; index < emc.status().motion.traj.joints; index++) {
+      const auto& joint = emc.status().motion.joint[index];
       // ImGui::Text("%d %c %9.3f %9.3f", index, joint.homed ? '*' : ' ',
       //            joint.output, joint.input);
       if (ImGui::TreeNode(&joint, "%d %c %9.3f %9.3f", index,
@@ -425,8 +426,9 @@ void ShowWindow()
   ImGui::End();
 
   if (ImGui::Begin("Spindles")) {
-    for (unsigned index = 0; index < emcStatus->motion.traj.spindles; index++) {
-      auto& spindle = emcStatus->motion.spindle[index];
+    for (unsigned index = 0; index < emc.status().motion.traj.spindles; index++)
+    {
+      const auto& spindle = emc.status().motion.spindle[index];
       const char* dir = "STOP";
       if (spindle.direction == 1)
         dir = "FORWARD (CW)";
@@ -457,7 +459,7 @@ void ShowWindow()
   ImGui::End();
 
   if (ImGui::Begin("Tag")) {
-    auto flags = emcStatus->motion.traj.tag.packed_flags;
+    auto flags = traj.tag.packed_flags;
     if (flags & (1 << GM_FLAG_UNITS))
       ImGui::Text("units");
     if (flags & (1 << GM_FLAG_DISTANCE_MODE))
@@ -511,23 +513,21 @@ void ShowWindow()
       ImGui::Text("external file");
 
     // field indices are in StateField enum
-    ImGui::Text("line nr: %d", emcStatus->motion.traj.tag.fields[0]);
-    ImGui::Text("G mode 0: %d", emcStatus->motion.traj.tag.fields[1]);
-    ImGui::Text("cutter comp on: %d", emcStatus->motion.traj.tag.fields[2]);
-    ImGui::Text("motion mode: %d", emcStatus->motion.traj.tag.fields[3]);
-    ImGui::Text("plane: %d", emcStatus->motion.traj.tag.fields[4]);
-    ImGui::Text("M modes 4: %d", emcStatus->motion.traj.tag.fields[5]);
-    ImGui::Text("origin: %d", emcStatus->motion.traj.tag.fields[6]);
-    ImGui::Text("toolchange: %d", emcStatus->motion.traj.tag.fields[7]);
+    ImGui::Text("line nr: %d", traj.tag.fields[0]);
+    ImGui::Text("G mode 0: %d", traj.tag.fields[1]);
+    ImGui::Text("cutter comp on: %d", traj.tag.fields[2]);
+    ImGui::Text("motion mode: %d", traj.tag.fields[3]);
+    ImGui::Text("plane: %d", traj.tag.fields[4]);
+    ImGui::Text("M modes 4: %d", traj.tag.fields[5]);
+    ImGui::Text("origin: %d", traj.tag.fields[6]);
+    ImGui::Text("toolchange: %d", traj.tag.fields[7]);
     // field indices are in StateFieldFloat enum
-    ImGui::Text("line nr: %f", emcStatus->motion.traj.tag.fields_float[0]);
-    ImGui::Text("feedrate: %f", emcStatus->motion.traj.tag.fields_float[1]);
-    ImGui::Text("speed: %f", emcStatus->motion.traj.tag.fields_float[2]);
-    ImGui::Text("path tolerance: %f",
-                emcStatus->motion.traj.tag.fields_float[3]);
-    ImGui::Text("naive CAM tolerance: %f",
-                emcStatus->motion.traj.tag.fields_float[4]);
-    ImGui::Text("filename %s", emcStatus->motion.traj.tag.filename);
+    ImGui::Text("line nr: %f", traj.tag.fields_float[0]);
+    ImGui::Text("feedrate: %f", traj.tag.fields_float[1]);
+    ImGui::Text("speed: %f", traj.tag.fields_float[2]);
+    ImGui::Text("path tolerance: %f", traj.tag.fields_float[3]);
+    ImGui::Text("naive CAM tolerance: %f", traj.tag.fields_float[4]);
+    ImGui::Text("filename %s", traj.tag.filename);
   }
   ImGui::End();
 
@@ -536,8 +536,9 @@ void ShowWindow()
     const char* state = "invalid";
     const char* execState = "invalid";
     const char* interpState = "invalid";
+    const auto& task = emc.status().task;
 
-    switch (emcStatus->task.mode) {
+    switch (task.mode) {
     case EMC_TASK_MODE_ENUM::EMC_TASK_MODE_AUTO:
       mode = "AUTO";
       break;
@@ -549,7 +550,7 @@ void ShowWindow()
       break;
     }
 
-    switch (emcStatus->task.state) {
+    switch (task.state) {
     case EMC_TASK_STATE_ENUM::EMC_TASK_STATE_ESTOP:
       state = "ESTOP";
       break;
@@ -564,7 +565,7 @@ void ShowWindow()
       break;
     }
 
-    switch (emcStatus->task.execState) {
+    switch (task.execState) {
     case EMC_TASK_EXEC_DONE:
       execState = "done";
       break;
@@ -594,7 +595,7 @@ void ShowWindow()
       break;
     }
 
-    switch (emcStatus->task.interpState) {
+    switch (task.interpState) {
     case EMC_TASK_INTERP_IDLE:
       interpState = "idle";
       break;
@@ -611,11 +612,11 @@ void ShowWindow()
 
     {
       std::ostringstream buf;
-      auto it = std::begin(emcStatus->task.activeGCodes);
+      auto it = std::begin(task.activeGCodes);
       // buf << "Line " << *it << ' ';
       ++it;
 
-      for (auto end = std::end(emcStatus->task.activeGCodes); it != end; ++it) {
+      for (auto end = std::end(task.activeGCodes); it != end; ++it) {
         auto code = *it;
         if (code == -1)
           continue;
@@ -631,10 +632,10 @@ void ShowWindow()
 
     {
       std::ostringstream buf;
-      auto it = std::begin(emcStatus->task.activeMCodes);
+      auto it = std::begin(task.activeMCodes);
       ++it; // skip line nr
 
-      for (auto end = std::end(emcStatus->task.activeMCodes); it != end; ++it) {
+      for (auto end = std::end(task.activeMCodes); it != end; ++it) {
         auto code = *it;
         if (code == -1)
           continue;
@@ -643,50 +644,46 @@ void ShowWindow()
       ImGui::TextUnformatted(buf.str().c_str());
     }
 
-    ImGui::Text("F%.0f S%.0f", emcStatus->task.activeSettings[1],
-                emcStatus->task.activeSettings[2]);
+    ImGui::Text("F%.0f S%.0f", task.activeSettings[1], task.activeSettings[2]);
 
     ImGui::Text("Mode %s State %s execState %s interpState %s", mode, state,
                 execState, interpState);
     ImGui::Text("callLevel %d motionLine %d currentLine %d readLine %d",
-                emcStatus->task.callLevel, emcStatus->task.motionLine,
-                emcStatus->task.currentLine, emcStatus->task.readLine);
-    ImGui::Text("File %s", emcStatus->task.file);
-    ImGui::Text("Command %s", emcStatus->task.command);
-    if (ImGui::TreeNode("Offsets", "Offsets %d/G92/tool rot %f",
-                        emcStatus->task.g5x_index, emcStatus->task.rotation_xy))
+                task.callLevel, task.motionLine, task.currentLine,
+                task.readLine);
+    ImGui::Text("File %s", task.file);
+    ImGui::Text("Command %s", task.command);
+    if (ImGui::TreeNode("Offsets", "Offsets %d/G92/tool rot %f", task.g5x_index,
+                        task.rotation_xy))
     {
       ImGui::PushFont(io.Fonts->Fonts[3]);
-      if (emcStatus->motion.traj.axis_mask & 1)
-        ImGui::Text("X %9.3f %9.3f %9.3f", emcStatus->task.g5x_offset.tran.x,
-                    emcStatus->task.g92_offset.tran.x,
-                    emcStatus->task.toolOffset.tran.x);
-      if (emcStatus->motion.traj.axis_mask & 2)
-        ImGui::Text("Y %9.3f %9.3f %9.3f", emcStatus->task.g5x_offset.tran.y,
-                    emcStatus->task.g92_offset.tran.y,
-                    emcStatus->task.toolOffset.tran.y);
-      if (emcStatus->motion.traj.axis_mask & 4)
-        ImGui::Text("Z %9.3f %9.3f %9.3f", emcStatus->task.g5x_offset.tran.z,
-                    emcStatus->task.g92_offset.tran.z,
-                    emcStatus->task.toolOffset.tran.z);
-      if (emcStatus->motion.traj.axis_mask & 8)
-        ImGui::Text("A %9.3f %9.3f %9.3f", emcStatus->task.g5x_offset.a,
-                    emcStatus->task.g92_offset.a, emcStatus->task.toolOffset.a);
-      if (emcStatus->motion.traj.axis_mask & 16)
-        ImGui::Text("B %9.3f %9.3f %9.3f", emcStatus->task.g5x_offset.b,
-                    emcStatus->task.g92_offset.b, emcStatus->task.toolOffset.b);
-      if (emcStatus->motion.traj.axis_mask & 32)
-        ImGui::Text("C %9.3f %9.3f %9.3f", emcStatus->task.g5x_offset.c,
-                    emcStatus->task.g92_offset.c, emcStatus->task.toolOffset.c);
-      if (emcStatus->motion.traj.axis_mask & 64)
-        ImGui::Text("U %9.3f %9.3f %9.3f", emcStatus->task.g5x_offset.u,
-                    emcStatus->task.g92_offset.u, emcStatus->task.toolOffset.u);
-      if (emcStatus->motion.traj.axis_mask & 128)
-        ImGui::Text("V %9.3f %9.3f %9.3f", emcStatus->task.g5x_offset.v,
-                    emcStatus->task.g92_offset.v, emcStatus->task.toolOffset.v);
-      if (emcStatus->motion.traj.axis_mask & 256)
-        ImGui::Text("W %9.3f %9.3f %9.3f", emcStatus->task.g5x_offset.w,
-                    emcStatus->task.g92_offset.w, emcStatus->task.toolOffset.w);
+      if (traj.axis_mask & 1)
+        ImGui::Text("X %9.3f %9.3f %9.3f", task.g5x_offset.tran.x,
+                    task.g92_offset.tran.x, task.toolOffset.tran.x);
+      if (traj.axis_mask & 2)
+        ImGui::Text("Y %9.3f %9.3f %9.3f", task.g5x_offset.tran.y,
+                    task.g92_offset.tran.y, task.toolOffset.tran.y);
+      if (traj.axis_mask & 4)
+        ImGui::Text("Z %9.3f %9.3f %9.3f", task.g5x_offset.tran.z,
+                    task.g92_offset.tran.z, task.toolOffset.tran.z);
+      if (traj.axis_mask & 8)
+        ImGui::Text("A %9.3f %9.3f %9.3f", task.g5x_offset.a, task.g92_offset.a,
+                    task.toolOffset.a);
+      if (traj.axis_mask & 16)
+        ImGui::Text("B %9.3f %9.3f %9.3f", task.g5x_offset.b, task.g92_offset.b,
+                    task.toolOffset.b);
+      if (traj.axis_mask & 32)
+        ImGui::Text("C %9.3f %9.3f %9.3f", task.g5x_offset.c, task.g92_offset.c,
+                    task.toolOffset.c);
+      if (traj.axis_mask & 64)
+        ImGui::Text("U %9.3f %9.3f %9.3f", task.g5x_offset.u, task.g92_offset.u,
+                    task.toolOffset.u);
+      if (traj.axis_mask & 128)
+        ImGui::Text("V %9.3f %9.3f %9.3f", task.g5x_offset.v, task.g92_offset.v,
+                    task.toolOffset.v);
+      if (traj.axis_mask & 256)
+        ImGui::Text("W %9.3f %9.3f %9.3f", task.g5x_offset.w, task.g92_offset.w,
+                    task.toolOffset.w);
       ImGui::PopFont();
       ImGui::TreePop();
     }
@@ -694,8 +691,9 @@ void ShowWindow()
   ImGui::End();
 
   if (ImGui::Begin("Tools")) {
-    ImGui::Text("pocket prepped: %d", emcStatus->io.tool.pocketPrepped);
-    ImGui::Text("tool in spindle: %d", emcStatus->io.tool.toolInSpindle);
+    const auto& tools = emc.status().io.tool;
+    ImGui::Text("pocket prepped: %d", tools.pocketPrepped);
+    ImGui::Text("tool in spindle: %d", tools.toolInSpindle);
 
     if (ImGui::BeginTable("Tools", 4)) {
       ImGui::TableSetupColumn("Tool#", ImGuiTableColumnFlags_NoHide);
@@ -704,7 +702,7 @@ void ShowWindow()
       ImGui::TableSetupColumn("Description", ImGuiTableColumnFlags_NoHide);
       ImGui::TableHeadersRow();
 
-      for (auto& tool : emcStatus->io.tool.toolTable) {
+      for (auto& tool : tools.toolTable) {
         if (tool.toolno < 0)
           continue;
         ImGui::TableNextRow();
@@ -722,73 +720,53 @@ void ShowWindow()
 
   if (ImGui::Begin("CNC")) {
     ImGui::Text("test");
-    ImGui::Text("state %d status %d", emcStatus->state, emcStatus->status);
-    ImGui::Text("interpState %d", emcStatus->task.interpState);
+    ImGui::Text("state %d status %d", emc.status().state, emc.status().status);
+    ImGui::Text("interpState %d", emc.status().task.interpState);
 
-    ImGui::Text("X %9.3f %9.3f", emcStatus->motion.joint[0].output,
-                emcStatus->motion.joint[0].velocity);
-    ImGui::Text("Y %9.3f %9.3f", emcStatus->motion.joint[1].output,
-                emcStatus->motion.joint[1].velocity);
-    ImGui::Text("Z %9.3f %9.3f", emcStatus->motion.joint[2].output,
-                emcStatus->motion.joint[2].velocity);
+    // TODO: get number of active joints
+    for (int i = 0; i < 3; i++) {
+      ImGui::Text("J%d %9.3f %9.3f", i, emc.status().motion.joint[i].output,
+                  emc.status().motion.joint[i].velocity);
+    }
 
-    ImGui::Text("DTG: %f", emcStatus->motion.traj.distance_to_go);
-    ImGui::Text("X %9.3f Y %9.3f Z %9.3f",
-                emcStatus->motion.traj.actualPosition.tran.x,
-                emcStatus->motion.traj.actualPosition.tran.y,
-                emcStatus->motion.traj.actualPosition.tran.z);
+    ImGui::Text("DTG: %f", traj.distance_to_go);
+    ImGui::Text("X %9.3f Y %9.3f Z %9.3f", traj.actualPosition.tran.x,
+                traj.actualPosition.tran.y, traj.actualPosition.tran.z);
 
-    ImGui::Text("%d %s:%d", emcStatus->motion.traj.line,
-                emcStatus->motion.traj.source_file,
-                emcStatus->motion.traj.source_line);
+    ImGui::Text("%d %s:%d", traj.line, traj.source_file, traj.source_line);
 
-    ImGui::Text("task.execState %d", emcStatus->task.execState);
-    ImGui::Text("line %d interpState %d", emcStatus->task.motionLine,
-                emcStatus->task.interpState);
+    ImGui::Text("task.execState %d", emc.status().task.execState);
+    ImGui::Text("line %d interpState %d", emc.status().task.motionLine,
+                emc.status().task.interpState);
 
-    ImGui::Text("%s:%d", emcStatus->task.file, emcStatus->task.currentLine);
+    ImGui::Text("%s:%d", emc.status().task.file, emc.status().task.currentLine);
   }
   ImGui::End();
 
   if (ImGui::Begin("Commands")) {
     if (ImGui::Button("Abort")) {
-      EMC_TASK_ABORT msg;
-      emcCommandSend(msg);
+      emc.send_abort();
     }
     if (ImGui::Button("ESTOP")) {
-      EMC_TASK_SET_STATE msg;
-      msg.state = EMC_TASK_STATE_ESTOP;
-      emcCommandSend(msg);
+      emc.send_abort();
     }
     if (ImGui::Button("ESTOP Reset")) {
-      EMC_TASK_SET_STATE msg;
-      msg.state = EMC_TASK_STATE_ESTOP_RESET;
-      emcCommandSend(msg);
+      emc.send_ESTOP_reset();
     }
     if (ImGui::Button("ON")) {
-      EMC_TASK_SET_STATE msg;
-      msg.state = EMC_TASK_STATE_ON;
-      emcCommandSend(msg);
+      emc.send_machine_on();
     }
     if (ImGui::Button("OFF")) {
-      EMC_TASK_SET_STATE msg;
-      msg.state = EMC_TASK_STATE_OFF;
-      emcCommandSend(msg);
+      emc.send_machhine_off();
     }
     if (ImGui::Button("Manual")) {
-      EMC_TASK_SET_MODE msg;
-      msg.mode = EMC_TASK_MODE_MANUAL;
-      emcCommandSend(msg);
+      emc.send_manual();
     }
     if (ImGui::Button("Auto")) {
-      EMC_TASK_SET_MODE msg;
-      msg.mode = EMC_TASK_MODE_AUTO;
-      emcCommandSend(msg);
+      emc.send_auto();
     }
     if (ImGui::Button("MDI")) {
-      EMC_TASK_SET_MODE msg;
-      msg.mode = EMC_TASK_MODE_MDI;
-      emcCommandSend(msg);
+      emc.send_mdi();
     }
   }
   ImGui::End();
@@ -814,7 +792,7 @@ void RightJustifiedText(const char* text)
 
 void ShowStatusWindow()
 {
-  updateStatus();
+  emc.update_status();
   ImGuiIO& io = ImGui::GetIO();
 
   constexpr char format_metric[] = "%9.3f";
@@ -824,10 +802,10 @@ void ShowStatusWindow()
   bool position_display_actual = true;
 
   if (ImGui::Begin("Status Window")) {
-    ImGui::BeginChild("ch1", ImVec2(ImGui::GetContentRegionAvail().x * 0.60f, 0), false, ImGuiWindowFlags_HorizontalScrollbar);
-    if (ImGui::BeginTable("##position_table", 3,
-                          ImGuiTableFlags_RowBg))
-    {
+    ImGui::BeginChild("ch1",
+                      ImVec2(ImGui::GetContentRegionAvail().x * 0.60f, 0),
+                      false, ImGuiWindowFlags_HorizontalScrollbar);
+    if (ImGui::BeginTable("##position_table", 3, ImGuiTableFlags_RowBg)) {
       ImGui::TableSetupColumn("WCS", ImGuiTableColumnFlags_WidthFixed);
       if (position_display_metric) {
         ImGui::TableSetupColumn("Position [mm]");
@@ -845,7 +823,7 @@ void ShowStatusWindow()
       static const ImVec4 color2 = ImColor::HSV(2 / 7.f, 0.6f, 0.6f);
       static const ImVec4 color3 = ImColor::HSV(0 / 7.f, 0.6f, 0.6f);
 
-      const auto& traj = emcStatus->motion.traj;
+      const auto& traj = emc.status().motion.traj;
       struct
       {
         const bool active;
@@ -929,12 +907,13 @@ void ShowStatusWindow()
       ImGui::PushFont(io.Fonts->Fonts[4]);
       ImGui::Text("T");
       ImGui::TableNextColumn();
-      ImGui::Text("%d", emcStatus->io.tool.toolInSpindle);
+      ImGui::Text("%d", emc.status().io.tool.toolInSpindle);
       ImGui::PopFont();
-      //auto& tool = emcStatus->io.tool.toolTablecurrent
+      // auto& tool = emc.status().io.tool.toolTablecurrent
       ImGui::TableNextColumn();
-      //auto& tool = emcStatus->io.tool.toolTable[emcStatus->io.tool.toolInSpindle];
-      auto& tool = emcStatus->io.tool.toolTable[0];
+      // auto& tool =
+      // emc.status().io.tool.toolTable[emc.status().io.tool.toolInSpindle];
+      auto& tool = emc.status().io.tool.toolTable[0];
 
       ImGui::Text("D %.3fmm", tool.diameter);
       ImGui::Text("L %.3fmm", tool.offset.tran.z);
@@ -945,10 +924,10 @@ void ShowStatusWindow()
       ImGui::PushFont(io.Fonts->Fonts[4]);
       ImGui::Text("F");
       ImGui::TableNextColumn();
-      ImGui::Text("%.0f", emcStatus->motion.traj.tag.fields_float[1]);
+      ImGui::Text("%.0f", emc.status().motion.traj.tag.fields_float[1]);
       ImGui::PopFont();
       ImGui::TableNextColumn();
-      ImGui::Text("%.0f", emcStatus->motion.traj.current_vel * 60);
+      ImGui::Text("%.0f", emc.status().motion.traj.current_vel * 60);
       ImGui::Text("mm/min");
 
       // Spindle
@@ -957,10 +936,10 @@ void ShowStatusWindow()
       ImGui::PushFont(io.Fonts->Fonts[4]);
       ImGui::Text("S");
       ImGui::TableNextColumn();
-      ImGui::Text("%.0f", emcStatus->motion.traj.tag.fields_float[2]);
+      ImGui::Text("%.0f", emc.status().motion.traj.tag.fields_float[2]);
       ImGui::PopFont();
       ImGui::TableNextColumn();
-      ImGui::Text("%.0f", emcStatus->motion.spindle[0].speed);
+      ImGui::Text("%.0f", emc.status().motion.spindle[0].speed);
 
       ImGui::EndTable();
     }
@@ -975,8 +954,8 @@ void ShowGCodeWindow()
   static std::string gcode_file_name;
 
   if (ImGui::Begin("GCode")) {
-    if (gcode_file_name != emcStatus->task.file) {
-      gcode_file_name = emcStatus->task.file;
+    if (gcode_file_name != emc.status().task.file) {
+      gcode_file_name = emc.status().task.file;
       std::ifstream f(gcode_file_name);
       if (f.good()) {
         std::string gcode((std::istreambuf_iterator<char>(f)),
@@ -987,7 +966,7 @@ void ShowGCodeWindow()
     }
     auto cpos = editor.GetCursorPosition();
     TextEditor::Breakpoints breakpoints;
-    breakpoints.insert(emcStatus->task.currentLine);
+    breakpoints.insert(emc.status().task.currentLine);
     editor.SetBreakpoints(breakpoints);
 
     ImGui::Text(

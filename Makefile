@@ -17,8 +17,8 @@
 EXE = copilot
 IMGUI_DIR = lib/imgui
 NODE_DIR = lib/imgui-node-editor
+LINUXCNC_DIR = ../linuxcnc
 COLOR_TEXT_EDIT_DIR = lib/imgui-color-text-edit
-LINUXCNC_DIR = ../linuxcnc-up
 SOURCES = src/main.cpp src/imcnc.cpp src/imhal.cpp src/shcom.cpp
 SOURCES += $(IMGUI_DIR)/imgui.cpp $(IMGUI_DIR)/imgui_demo.cpp $(IMGUI_DIR)/imgui_draw.cpp $(IMGUI_DIR)/imgui_tables.cpp $(IMGUI_DIR)/imgui_widgets.cpp
 SOURCES += $(IMGUI_DIR)/backends/imgui_impl_glfw.cpp $(IMGUI_DIR)/backends/imgui_impl_opengl3.cpp
