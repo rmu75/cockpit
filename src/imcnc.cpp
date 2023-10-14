@@ -6,8 +6,12 @@
 
 // clang-format off
 #include <signal.h>
+#include <fstream>
+#include <streambuf>
+#include <iostream>
 
 #include "imgui.h"
+#include "TextEditor.h"
 // clang-format on
 
 #define TOOL_NML
@@ -961,6 +965,38 @@ void ShowStatusWindow()
       ImGui::EndTable();
     }
     ImGui::EndChild();
+  }
+  ImGui::End();
+}
+
+void ShowGCodeWindow()
+{
+  static TextEditor editor;
+  static std::string gcode_file_name;
+
+  if (ImGui::Begin("GCode")) {
+    if (gcode_file_name != emcStatus->task.file) {
+      gcode_file_name = emcStatus->task.file;
+      std::ifstream f(gcode_file_name);
+      if (f.good()) {
+        std::string gcode((std::istreambuf_iterator<char>(f)),
+                          std::istreambuf_iterator<char>());
+        editor.SetText(gcode);
+        std::cout << gcode;
+      }
+    }
+    auto cpos = editor.GetCursorPosition();
+    TextEditor::Breakpoints breakpoints;
+    breakpoints.insert(emcStatus->task.currentLine);
+    editor.SetBreakpoints(breakpoints);
+
+    ImGui::Text(
+        "%6d/%-6d %6d lines  | %s | %s | %s | %s", cpos.mLine + 1,
+        cpos.mColumn + 1, editor.GetTotalLines(),
+        editor.IsOverwrite() ? "Ovr" : "Ins", editor.CanUndo() ? "*" : " ",
+        editor.GetLanguageDefinition().mName.c_str(), gcode_file_name.c_str());
+
+    editor.Render("GCode");
   }
   ImGui::End();
 }

@@ -17,17 +17,19 @@
 EXE = copilot
 IMGUI_DIR = lib/imgui
 NODE_DIR = lib/imgui-node-editor
+COLOR_TEXT_EDIT_DIR = lib/imgui-color-text-edit
 LINUXCNC_DIR = ../linuxcnc-up
 SOURCES = src/main.cpp src/imcnc.cpp src/imhal.cpp src/shcom.cpp
 SOURCES += $(IMGUI_DIR)/imgui.cpp $(IMGUI_DIR)/imgui_demo.cpp $(IMGUI_DIR)/imgui_draw.cpp $(IMGUI_DIR)/imgui_tables.cpp $(IMGUI_DIR)/imgui_widgets.cpp
 SOURCES += $(IMGUI_DIR)/backends/imgui_impl_glfw.cpp $(IMGUI_DIR)/backends/imgui_impl_opengl3.cpp
 SOURCES += $(NODE_DIR)/crude_json.cpp $(NODE_DIR)/imgui_canvas.cpp $(NODE_DIR)/imgui_node_editor_api.cpp $(NODE_DIR)/imgui_node_editor.cpp
+SOURCES += $(COLOR_TEXT_EDIT_DIR)/TextEditor.cpp
 
 OBJS = $(addsuffix .o, $(basename $(notdir $(SOURCES))))
 UNAME_S := $(shell uname -s)
 LINUX_GL_LIBS = -lGL
 
-CXXFLAGS = -std=c++20 -Iinclude -I$(IMGUI_DIR) -I$(IMGUI_DIR)/backends -I$(LINUXCNC_DIR)/include -I$(NODE_DIR)
+CXXFLAGS = -std=c++20 -Iinclude -I$(IMGUI_DIR) -I$(IMGUI_DIR)/backends -I$(LINUXCNC_DIR)/include -I$(NODE_DIR) -I$(COLOR_TEXT_EDIT_DIR)
 CXXFLAGS += -O2 -g -Wall -Wformat -DULAPI
 LIBS = -L$(LINUXCNC_DIR)/lib -lnml -llinuxcnchal -llinuxcnc -llinuxcncini -ltirpc
 
@@ -81,6 +83,9 @@ endif
 	$(CXX) $(CXXFLAGS) -c -o $@ $<
 
 %.o:$(NODE_DIR)/%.cpp
+	$(CXX) $(CXXFLAGS) -c -o $@ $<
+
+%.o:$(COLOR_TEXT_EDIT_DIR)/%.cpp
 	$(CXX) $(CXXFLAGS) -c -o $@ $<
 
 %.o:$(IMGUI_DIR)/backends/%.cpp

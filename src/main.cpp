@@ -33,6 +33,7 @@ namespace ImCNC {
 extern int init(int argc, char* argv[]);
 extern void ShowWindow();
 extern void ShowStatusWindow();
+extern void ShowGCodeWindow();
 extern void initHAL();
 extern void ShowHAL();
 } // namespace ImCNC
@@ -272,6 +273,7 @@ int main(int argc, char* argv[])
 
     ImCNC::ShowWindow();
     ImCNC::ShowStatusWindow();
+    ImCNC::ShowGCodeWindow();
     ImCNC::ShowHAL();
 
     // 2. Show a simple window that we create ourselves. We use a Begin/End pair
