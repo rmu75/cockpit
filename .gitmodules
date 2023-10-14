@@ -1,3 +1,11 @@
 [submodule "lib/imgui"]
 	path = lib/imgui
 	url = https://github.com/ocornut/imgui
+
+[submodule "lib/imgui-node-editor"]
+	path = lib/imgui-node-editor
+	url = https://github.com/thedmd/imgui-node-editor
+
+[submodule "lib/imgui-color-text-edit"]
+	path = lib/imgui-color-text-edit
+	url = https://github.com/BalazsJako/ImGuiColorTextEdit
