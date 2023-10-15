@@ -233,28 +233,46 @@ void ShowWindow()
   emc.update_status();
   ImGuiIO& io = ImGui::GetIO();
   const auto& traj = emc.status().motion.traj;
+  constexpr const char* kinematics_type[] = {"identity", "serial", "parallel",
+                                             "custom"};
 
   if (ImGui::Begin("Traj Status")) {
     ImGui::Text("linear units: %f", traj.linearUnits);
     ImGui::Text("angular units: %f", traj.angularUnits);
     ImGui::Text("cycle time: %f", traj.cycleTime);
+    ImGui::Text("axis mask: %d", traj.axis_mask);
     ImGui::Text("joints: %d", traj.joints);
+    ImGui::Text("mode: %s", (traj.mode == EMC_TRAJ_MODE_ENUM::EMC_TRAJ_MODE_FREE
+                                 ? "free"
+                                 : "teleop"));
+    ImGui::Text("kinematics type: %s", kinematics_type[traj.kinematics_type]);
     ImGui::Text("scale: %f", traj.scale);
     ImGui::Text("rapid scale: %f", traj.rapid_scale);
     ImGui::Text("spindles: %d", traj.spindles);
-    ImGui::Text("acceleration: %9.3f", traj.acceleration);
-    ImGui::Text("velocity: %9.3f", traj.velocity);
+    ImGui::Text("acceleration/max: %9.3f/%9.3f", traj.acceleration,
+                traj.maxAcceleration);
+    ImGui::Text("velocity/max: %9.3f/%9.3f", traj.velocity, traj.maxVelocity);
     ImGui::Text("distance to go: %9.3f", traj.distance_to_go);
     ImGui::Text("current velocity: %9.3f", traj.current_vel);
     ImGui::Text("queue: %d activeQueue: %d full: %d id: %d", traj.queue,
                 traj.activeQueue, traj.queueFull, traj.id);
     ImGui::Text("motion type %d", traj.motion_type);
+    if (traj.enabled)
+      ImGui::Text("enabled");
+    if (traj.inpos)
+      ImGui::Text("in position");
+    if (traj.paused)
+      ImGui::Text("paused");
     if (traj.feed_override_enabled)
       ImGui::Text("feed override");
     if (traj.adaptive_feed_enabled)
       ImGui::Text("adaptive feed");
     if (traj.feed_hold_enabled)
       ImGui::Text("feed hold");
+    if (traj.probing)
+      ImGui::Text("probing");
+    if (traj.probe_tripped)
+      ImGui::Text("probe tripped");
   }
   ImGui::End();
 
@@ -382,7 +400,7 @@ void ShowWindow()
 
   if (ImGui::Begin("Joints")) {
     ImGui::PushFont(io.Fonts->Fonts[3]);
-    for (unsigned index = 0; index < emc.status().motion.traj.joints; index++) {
+    for (unsigned index = 0; index < traj.joints; index++) {
       const auto& joint = emc.status().motion.joint[index];
       // ImGui::Text("%d %c %9.3f %9.3f", index, joint.homed ? '*' : ' ',
       //            joint.output, joint.input);
@@ -425,9 +443,28 @@ void ShowWindow()
   }
   ImGui::End();
 
+  if (ImGui::Begin("Axis")) {
+    ImGui::PushFont(io.Fonts->Fonts[3]);
+    for (unsigned index = 0; index < 9; index++) {
+      if (traj.axis_mask & (1 << index)) {
+        constexpr const char* axis_names = "XYZABCUVW";
+        const auto& axis = emc.status().motion.axis[index];
+        if (ImGui::TreeNode(&axis, "%c", axis_names[index])) {
+          ImGui::PushFont(io.Fonts->Fonts[0]);
+          ImGui::Text("limits %f %f", axis.minPositionLimit,
+                      axis.maxPositionLimit);
+          ImGui::Text("velocity: %9.3f", axis.velocity);
+          ImGui::TreePop();
+          ImGui::PopFont();
+        }
+      }
+    }
+    ImGui::PopFont();
+  }
+  ImGui::End();
+
   if (ImGui::Begin("Spindles")) {
-    for (unsigned index = 0; index < emc.status().motion.traj.spindles; index++)
-    {
+    for (unsigned index = 0; index < traj.spindles; index++) {
       const auto& spindle = emc.status().motion.spindle[index];
       const char* dir = "STOP";
       if (spindle.direction == 1)
@@ -435,6 +472,7 @@ void ShowWindow()
       if (spindle.direction == -1)
         dir = "REVERSE (CCW)";
       if (ImGui::TreeNode(&spindle, "%d: %f %s", index, spindle.speed, dir)) {
+        ImGui::Text("state: %d", spindle.state);
         ImGui::Text("scale: %f", spindle.spindle_scale);
         ImGui::Text("css maximum: %f", spindle.css_maximum);
         ImGui::Text("css factor: %f", spindle.css_factor);
