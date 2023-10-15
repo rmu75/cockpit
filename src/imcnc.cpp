@@ -34,7 +34,7 @@ int quitting = 0;
 
 static void sigQuit(int sig) { quitting = 1; }
 
-static ShCom emc;
+ShCom emc;
 
 int init(int argc, char* argv[])
 {

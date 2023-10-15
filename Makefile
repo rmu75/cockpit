@@ -80,7 +80,33 @@ ifeq ($(OS), Windows_NT)
 	CFLAGS = $(CXXFLAGS)
 endif
 
-LIBS += /usr/lib/x86_64-linux-gnu/libvtkRenderingAnnotation-9.1.so.9.1.0 /usr/lib/x86_64-linux-gnu/libvtkInteractionStyle-9.1.so.9.1.0 /usr/lib/x86_64-linux-gnu/libvtkRenderingFreeType-9.1.so.9.1.0 /usr/lib/x86_64-linux-gnu/libfreetype.so /usr/lib/x86_64-linux-gnu/libvtkRenderingGL2PSOpenGL2-9.1.so.9.1.0 /usr/lib/x86_64-linux-gnu/libvtkRenderingOpenGL2-9.1.so.9.1.0 /usr/lib/x86_64-linux-gnu/libvtkRenderingUI-9.1.so.9.1.0 /usr/lib/x86_64-linux-gnu/libvtkRenderingCore-9.1.so.9.1.0 /usr/lib/x86_64-linux-gnu/libvtkCommonColor-9.1.so.9.1.0 /usr/lib/x86_64-linux-gnu/libvtkFiltersGeneral-9.1.so.9.1.0 /usr/lib/x86_64-linux-gnu/libvtkFiltersCore-9.1.so.9.1.0 /usr/lib/x86_64-linux-gnu/libvtkCommonExecutionModel-9.1.so.9.1.0 /usr/lib/x86_64-linux-gnu/libvtkCommonDataModel-9.1.so.9.1.0 /usr/lib/x86_64-linux-gnu/libvtkCommonTransforms-9.1.so.9.1.0 /usr/lib/x86_64-linux-gnu/libvtkCommonMisc-9.1.so.9.1.0 /usr/lib/x86_64-linux-gnu/libvtkCommonMath-9.1.so.9.1.0 /usr/lib/x86_64-linux-gnu/libvtkkissfft-9.1.so.9.1.0 /usr/lib/x86_64-linux-gnu/libGLEW.so /usr/lib/x86_64-linux-gnu/libX11.so /usr/lib/x86_64-linux-gnu/libvtkCommonCore-9.1.so.9.1.0 /usr/lib/x86_64-linux-gnu/libtbb.so.12.5 /usr/lib/x86_64-linux-gnu/libvtksys-9.1.so.9.1.0
+LIBS += \
+	/usr/lib/x86_64-linux-gnu/libvtkRenderingAnnotation-9.1.so.9.1.0 \
+	/usr/lib/x86_64-linux-gnu/libvtkInteractionStyle-9.1.so.9.1.0 \
+	/usr/lib/x86_64-linux-gnu/libvtkInteractionWidgets-9.1.so.9.1.0 \
+	/usr/lib/x86_64-linux-gnu/libvtkRenderingFreeType-9.1.so.9.1.0 \
+	/usr/lib/x86_64-linux-gnu/libvtkIOImport-9.1.so.9.1.0 \
+	/usr/lib/x86_64-linux-gnu/libfreetype.so \
+	/usr/lib/x86_64-linux-gnu/libvtkRenderingGL2PSOpenGL2-9.1.so.9.1.0 \
+	/usr/lib/x86_64-linux-gnu/libvtkRenderingOpenGL2-9.1.so.9.1.0 \
+	/usr/lib/x86_64-linux-gnu/libvtkRenderingUI-9.1.so.9.1.0 \
+	/usr/lib/x86_64-linux-gnu/libvtkRenderingCore-9.1.so.9.1.0 \
+	/usr/lib/x86_64-linux-gnu/libvtkCommonColor-9.1.so.9.1.0 \
+	/usr/lib/x86_64-linux-gnu/libvtkFiltersSources-9.1.so.9.1.0 \
+	/usr/lib/x86_64-linux-gnu/libvtkFiltersGeneral-9.1.so.9.1.0 \
+	/usr/lib/x86_64-linux-gnu/libvtkFiltersParallel-9.1.so.9.1.0 \
+	/usr/lib/x86_64-linux-gnu/libvtkFiltersCore-9.1.so.9.1.0 \
+	/usr/lib/x86_64-linux-gnu/libvtkCommonExecutionModel-9.1.so.9.1.0 \
+	/usr/lib/x86_64-linux-gnu/libvtkCommonDataModel-9.1.so.9.1.0 \
+	/usr/lib/x86_64-linux-gnu/libvtkCommonTransforms-9.1.so.9.1.0 \
+	/usr/lib/x86_64-linux-gnu/libvtkCommonMisc-9.1.so.9.1.0 \
+	/usr/lib/x86_64-linux-gnu/libvtkCommonMath-9.1.so.9.1.0 \
+	/usr/lib/x86_64-linux-gnu/libvtkkissfft-9.1.so.9.1.0 \
+	/usr/lib/x86_64-linux-gnu/libGLEW.so \
+	/usr/lib/x86_64-linux-gnu/libX11.so \
+	/usr/lib/x86_64-linux-gnu/libvtkCommonCore-9.1.so.9.1.0 \
+	/usr/lib/x86_64-linux-gnu/libtbb.so.12.5 \
+	/usr/lib/x86_64-linux-gnu/libvtksys-9.1.so.9.1.0
 
 ##---------------------------------------------------------------------
 ## BUILD RULES
