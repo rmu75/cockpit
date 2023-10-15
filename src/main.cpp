@@ -15,12 +15,14 @@
 #include "imgui.h"
 #include "imgui_impl_glfw.h"
 #include "imgui_impl_opengl3.h"
+#include "vtk_preview.hpp"
 
 #include <stdio.h>
 #define GL_SILENCE_DEPRECATION
 #if defined(IMGUI_IMPL_OPENGL_ES2)
 #include <GLES2/gl2.h>
 #endif
+#include <GL/gl3w.h>    // GL3w, initialized with gl3wInit() below
 #include <GLFW/glfw3.h> // Will drag system OpenGL headers
 #include <algorithm>
 
@@ -110,9 +112,6 @@ void set_full_screen(bool fs)
 
 int main(int argc, char* argv[])
 {
-  // Setup pipeline
-  // auto actor = SetupDemoPipeline();
-
   ImCNC::init(argc, argv);
   ImCNC::initHAL();
 
@@ -144,6 +143,12 @@ int main(int argc, char* argv[])
     return 1;
   glfwMakeContextCurrent(window);
   glfwSwapInterval(1); // Enable vsync
+
+  // Initialize OpenGL loader
+  if (gl3wInit() != 0) {
+    fprintf(stderr, "Failed to initialize OpenGL loader!\n");
+    return 1;
+  }
 
   // Setup Dear ImGui context
   IMGUI_CHECKVERSION();
@@ -245,6 +250,8 @@ int main(int argc, char* argv[])
   bool show_another_window = false;
   ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
 
+  ImCNC::VtkPreview PreviewWindow;
+
   // Main loop
   while (!glfwWindowShouldClose(window)) {
     // Poll and handle events (inputs, window resize, etc.)
@@ -275,6 +282,7 @@ int main(int argc, char* argv[])
     ImCNC::ShowStatusWindow();
     ImCNC::ShowGCodeWindow();
     ImCNC::ShowHAL();
+    PreviewWindow.show();
 
     // 2. Show a simple window that we create ourselves. We use a Begin/End pair
     // to created a named window.
