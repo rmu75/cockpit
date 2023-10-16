@@ -15,7 +15,9 @@
 #include "vtkConeSource.h"
 #include "vtkCubeAxesActor.h"
 #include "vtkCylinderSource.h"
+#include "vtkNamedColors.h"
 #include "vtkPolyDataMapper.h"
+#include "vtkProperty.h"
 #include "vtkSmartPointer.h"
 #include "vtkTransform.h"
 #include "vtkTransformPolyDataFilter.h"
@@ -70,65 +72,68 @@ public:
   }
 };
 
-class ToolActor : public vtkActor
+class ToolActor
 {
 public:
-  static ToolActor* New() { return new ToolActor(); }
-
   ToolActor()
   {
-    auto transform = vtkSmartPointer<vtkTransform>::New();
-    m_tool = vtkSmartPointer<vtkCylinderSource>::New();
-    // m_tool->SetHeight(height / 2.0);
-    // m_tool->SetCenter(height / 4.0, 0, 0);
-    // m_tool->SetRadius(height / 4.0);
-    // m_tool->SetResolution(64);
-    // transform->RotateWXYZ(90, 0, 1, 0);
+    vtkNew<vtkNamedColors> colors;
+    vtkColor3d cone_color = colors->GetColor3d("Tomato");
+
+    m_tool = vtkSmartPointer<vtkConeSource>::New();
     m_tool->SetHeight(height / 2.0);
-    m_tool->SetCenter(0, height / 4.0, 0);
+    m_tool->SetCenter(height / 4.0, 0, 0);
     m_tool->SetRadius(height / 4.0);
     m_tool->SetResolution(64);
-    transform->RotateWXYZ(180, 1, 0, 0);
-    auto transform_filter = vtkSmartPointer<vtkTransformPolyDataFilter>::New();
+    vtkNew<vtkTransform> transform;
+    transform->RotateWXYZ(90, 0, 1, 0);
+
+    vtkNew<vtkTransformPolyDataFilter> transform_filter;
     transform_filter->SetTransform(transform);
     transform_filter->SetInputConnection(m_tool->GetOutputPort());
     transform_filter->Update();
 
-    auto mapper = vtkSmartPointer<vtkPolyDataMapper>::New();
+    vtkNew<vtkPolyDataMapper> mapper;
     mapper->SetInputConnection(transform_filter->GetOutputPort());
 
-    SetMapper(mapper);
+    vtkNew<vtkActor> actor;
+    actor->SetMapper(mapper);
+    actor->GetProperty()->SetDiffuseColor(cone_color.GetData());
+    m_actor = actor;
   }
+
+  vtkSmartPointer<vtkActor> get_actor() { return m_actor; }
 
   void set_position(EmcPose position)
   {
-    // printf("set position %f %f %f\n", position.tran.x, position.tran.y,
-    //        position.tran.z);
     auto transform = vtkSmartPointer<vtkTransform>::New();
     transform->Translate(position.tran.x, position.tran.y, position.tran.z);
-    SetUserTransform(transform);
-    // SetPosition(position.tran.x, position.tran.y, position.tran.z);
+    m_actor->SetUserTransform(transform);
+    m_actor->SetPosition(position.tran.x, position.tran.y, position.tran.z);
   }
 
 private:
-  vtkSmartPointer<vtkCylinderSource> m_tool;
+  vtkSmartPointer<vtkConeSource> m_tool;
+  vtkSmartPointer<vtkActor> m_actor;
+
   double height = 50.0;
 };
 
 VtkPreview::VtkPreview()
 {
-  auto camera = vtkSmartPointer<vtkCamera>::New();
+  vtkNew<vtkCamera> camera;
   camera->ParallelProjectionOn();
   camera->SetClippingRange(0.01, 10000);
   auto renderer = m_viewer.getRenderer();
   renderer->SetActiveCamera(camera);
-  auto axes = vtkSmartPointer<AxesActor>::New();
-  auto machine = vtkSmartPointer<MachineActor>::New();
-  m_tool = vtkSmartPointer<ToolActor>::New();
+  vtkNew<AxesActor> axes;
+  vtkNew<MachineActor> machine;
+  m_tool_actor = std::make_unique<ToolActor>();
+
   machine->SetCamera(camera);
   m_viewer.addActor(axes);
   m_viewer.addActor(machine);
-  m_viewer.addActor(m_tool);
+  m_viewer.addActor(m_tool_actor->get_actor());
 }
 
 void VtkPreview::open_file(std::string path) {}
@@ -204,7 +209,7 @@ void VtkPreview::show()
     }
   }
 
-  m_tool->set_position(emc.status().motion.traj.actualPosition);
+  m_tool_actor->set_position(emc.status().motion.traj.actualPosition);
   m_viewer.render();
   ImGui::End();
 }

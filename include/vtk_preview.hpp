@@ -9,6 +9,8 @@
 
 #include "VtkViewer.h"
 
+#include <memory>
+
 class vtkCamera;
 class vtkRenderer;
 
@@ -28,7 +30,7 @@ private:
   void _update_camera(vtkCamera& camera, double x, double y, double z,
                       double vx, double vy, double vz);
   VtkViewer m_viewer;
-  vtkSmartPointer<ToolActor> m_tool;
+  std::unique_ptr<ToolActor> m_tool_actor;
 };
 
 } // namespace ImCNC
