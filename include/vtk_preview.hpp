@@ -22,7 +22,7 @@ class VtkPreview
 {
 public:
   VtkPreview();
-
+  ~VtkPreview();
   void open_file(std::string path);
   void show();
 

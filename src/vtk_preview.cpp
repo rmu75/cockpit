@@ -136,6 +136,8 @@ VtkPreview::VtkPreview()
   m_viewer.addActor(m_tool_actor->get_actor());
 }
 
+VtkPreview::~VtkPreview() {}
+
 void VtkPreview::open_file(std::string path) {}
 
 void VtkPreview::_update_camera(vtkCamera& camera, double x, double y, double z,
@@ -147,6 +149,7 @@ void VtkPreview::_update_camera(vtkCamera& camera, double x, double y, double z,
   camera.SetClippingRange(0.01, 10000);
   m_viewer.getInteractor()->ReInitialize();
 }
+
 void VtkPreview::show()
 {
   ImGui::SetNextWindowSize(ImVec2(360, 240), ImGuiCond_FirstUseEver);
