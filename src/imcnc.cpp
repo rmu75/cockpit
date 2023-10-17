@@ -993,19 +993,29 @@ void ShowGCodeWindow()
 
   if (ImGui::Begin("GCode")) {
     if (gcode_file_name != emc.status().task.file) {
+      // TODO: use some type of caching of opened files
+      // try to match interpreter behaviour regarding
+      // changing files on disk --> stack?
+      // it's probably safe to assume that the only
+      // potentially very large file is the top level one
+      // so it should suffice to keep call level 0 around.
       gcode_file_name = emc.status().task.file;
       std::ifstream f(gcode_file_name);
       if (f.good()) {
         std::string gcode((std::istreambuf_iterator<char>(f)),
                           std::istreambuf_iterator<char>());
         editor.SetText(gcode);
+        editor.SetReadOnly(true);
         std::cout << gcode;
       }
     }
     auto cpos = editor.GetCursorPosition();
     TextEditor::Breakpoints breakpoints;
-    breakpoints.insert(emc.status().task.currentLine);
+    auto current_line = emc.status().task.currentLine;
+    breakpoints.insert(current_line);
     editor.SetBreakpoints(breakpoints);
+    // why it needs -1 here and not in "breakpoints"?
+    editor.SetCursorPosition({current_line - 1, 0});
 
     ImGui::Text(
         "%6d/%-6d %6d lines  | %s | %s | %s | %s", cpos.mLine + 1,
