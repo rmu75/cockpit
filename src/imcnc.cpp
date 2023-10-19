@@ -1012,10 +1012,12 @@ void ShowGCodeWindow()
     auto cpos = editor.GetCursorPosition();
     TextEditor::Breakpoints breakpoints;
     auto current_line = emc.status().task.currentLine;
-    breakpoints.insert(current_line);
-    editor.SetBreakpoints(breakpoints);
-    // why it needs -1 here and not in "breakpoints"?
-    editor.SetCursorPosition({current_line - 1, 0});
+    if (current_line > 0) {
+      breakpoints.insert(current_line);
+      editor.SetBreakpoints(breakpoints);
+      // why it needs -1 here and not in "breakpoints"?
+      editor.SetCursorPosition({current_line - 1, 0});
+    }
 
     ImGui::Text(
         "%6d/%-6d %6d lines  | %s | %s | %s | %s", cpos.mLine + 1,
