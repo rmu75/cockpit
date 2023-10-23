@@ -246,8 +246,13 @@ int main(int argc, char* argv[])
   }
 
   // Our state
-  bool show_demo_window = true;
+  bool show_demo_window = false;
   bool show_another_window = false;
+  bool show_status_window = true;
+  bool show_gcode_window = true;
+  bool show_hal_window = true;
+  bool show_preview_window = false;
+
   ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
 
   ImCNC::VtkPreview PreviewWindow;
@@ -272,17 +277,36 @@ int main(int argc, char* argv[])
 
     ImGui::DockSpaceOverViewport(ImGui::GetMainViewport());
 
+    // menu bar
+    if (ImGui::BeginMainMenuBar()) {
+      if (ImGui::BeginMenu("File")) {
+        if (ImGui::MenuItem("exit")) {
+        }
+      }
+      if (ImGui::BeginMenu("Window")) {
+        ImGui::MenuItem("Show Status Window", "", &show_status_window);
+        ImGui::MenuItem("Show GCode Window", "", &show_gcode_window);
+        ImGui::MenuItem("Show HAL Window", "", &show_hal_window);
+        ImGui::MenuItem("Show Preview Window", "", &show_preview_window);
+        ImGui::EndMenu();
+      }
+      ImGui::EndMainMenuBar();
+    }
+
     // 1. Show the big demo window (Most of the sample code is in
     // ImGui::ShowDemoWindow()! You can browse its code to learn more about Dear
     // ImGui!).
     if (show_demo_window)
       ImGui::ShowDemoWindow(&show_demo_window);
-
     ImCNC::ShowWindow();
-    ImCNC::ShowStatusWindow();
-    ImCNC::ShowGCodeWindow();
-    ImCNC::ShowHAL();
-    PreviewWindow.show();
+    if (show_status_window)
+      ImCNC::ShowStatusWindow();
+    if (show_gcode_window)
+      ImCNC::ShowGCodeWindow();
+    if (show_hal_window)
+      ImCNC::ShowHAL();
+    if (show_preview_window)
+      PreviewWindow.show();
 
     // 2. Show a simple window that we create ourselves. We use a Begin/End pair
     // to created a named window.
