@@ -106,9 +106,9 @@ public:
 
   void set_position(EmcPose position)
   {
-    auto transform = vtkSmartPointer<vtkTransform>::New();
-    transform->Translate(position.tran.x, position.tran.y, position.tran.z);
-    m_actor->SetUserTransform(transform);
+    // auto transform = vtkSmartPointer<vtkTransform>::New();
+    // transform->Translate(position.tran.x, position.tran.y, position.tran.z);
+    // m_actor->SetUserTransform(transform);
     m_actor->SetPosition(position.tran.x, position.tran.y, position.tran.z);
   }
 
