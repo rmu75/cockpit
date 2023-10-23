@@ -839,12 +839,16 @@ void ShowStatusWindow()
   bool position_display_metric = true;
   bool position_display_actual = true;
 
+  constexpr const char* g5x_names[] = {"G54", "G55",   "G56",   "G57",
+                                       "G58", "G59.1", "G59.2", "G59.3"};
+
   if (ImGui::Begin("Status Window")) {
     ImGui::BeginChild("ch1",
                       ImVec2(ImGui::GetContentRegionAvail().x * 0.60f, 0),
                       false, ImGuiWindowFlags_HorizontalScrollbar);
     if (ImGui::BeginTable("##position_table", 3, ImGuiTableFlags_RowBg)) {
-      ImGui::TableSetupColumn("WCS", ImGuiTableColumnFlags_WidthFixed);
+      ImGui::TableSetupColumn(g5x_names[emc.status().task.g5x_index - 1],
+                              ImGuiTableColumnFlags_WidthFixed);
       if (position_display_metric) {
         ImGui::TableSetupColumn("Position [mm]");
         ImGui::TableSetupColumn("Dist-to-go [mm]");
@@ -862,36 +866,71 @@ void ShowStatusWindow()
       static const ImVec4 color3 = ImColor::HSV(0 / 7.f, 0.6f, 0.6f);
 
       const auto& traj = emc.status().motion.traj;
+      const auto& g5x_offset = emc.status().task.g5x_offset;
+      const auto& g92_offset = emc.status().task.g92_offset;
+      const auto& tool_offset = emc.status().task.toolOffset;
       struct
       {
         const bool active;
         const char* label;
-        const double cmd, act, dtg;
-      } axis_values[] = {{(traj.axis_mask & 1) != 0, "X", traj.position.tran.x,
-                          traj.actualPosition.tran.x, traj.dtg.tran.x},
-                         {(traj.axis_mask & 2) != 0, "Y", traj.position.tran.y,
-                          traj.actualPosition.tran.y, traj.dtg.tran.y},
-                         {(traj.axis_mask & 4) != 0, "Z", traj.position.tran.z,
-                          traj.actualPosition.tran.z, traj.dtg.tran.z},
-                         {(traj.axis_mask & 8) != 0, "A", traj.position.a,
-                          traj.actualPosition.a, traj.dtg.a},
-                         {(traj.axis_mask & 16) != 0, "B", traj.position.b,
-                          traj.actualPosition.b, traj.dtg.b},
-                         {(traj.axis_mask & 32) != 0, "C", traj.position.c,
-                          traj.actualPosition.c, traj.dtg.c},
-                         {(traj.axis_mask & 64) != 0, "U", traj.position.u,
-                          traj.actualPosition.u, traj.dtg.u},
-                         {(traj.axis_mask & 128) != 0, "V", traj.position.v,
-                          traj.actualPosition.v, traj.dtg.v},
-                         {(traj.axis_mask & 256) != 0, "W", traj.position.w,
-                          traj.actualPosition.w, traj.dtg.w}};
+        const double cmd, act, dtg, g5x_ofs, g92_ofs, tool_ofs;
+      } axis_values[] = {
+          {(traj.axis_mask & 1) != 0, "X", traj.position.tran.x,
+           traj.actualPosition.tran.x, traj.dtg.tran.x, g5x_offset.tran.x,
+           g92_offset.tran.x, tool_offset.tran.x},
+          {(traj.axis_mask & 2) != 0, "Y", traj.position.tran.y,
+           traj.actualPosition.tran.y, traj.dtg.tran.y, g5x_offset.tran.y,
+           g92_offset.tran.y, tool_offset.tran.y},
+          {(traj.axis_mask & 4) != 0, "Z", traj.position.tran.z,
+           traj.actualPosition.tran.z, traj.dtg.tran.z, g5x_offset.tran.z,
+           g92_offset.tran.z, tool_offset.tran.z},
+          {(traj.axis_mask & 8) != 0, "A", traj.position.a,
+           traj.actualPosition.a, traj.dtg.a, g5x_offset.a, g92_offset.a,
+           tool_offset.a},
+          {(traj.axis_mask & 16) != 0, "B", traj.position.b,
+           traj.actualPosition.b, traj.dtg.b, g5x_offset.b, g92_offset.b,
+           tool_offset.b},
+          {(traj.axis_mask & 32) != 0, "C", traj.position.c,
+           traj.actualPosition.c, traj.dtg.c, g5x_offset.c, g92_offset.c,
+           tool_offset.c},
+          {(traj.axis_mask & 64) != 0, "U", traj.position.u,
+           traj.actualPosition.u, traj.dtg.u, g5x_offset.u, g92_offset.u,
+           tool_offset.u},
+          {(traj.axis_mask & 128) != 0, "V", traj.position.v,
+           traj.actualPosition.v, traj.dtg.v, g5x_offset.v, g92_offset.v,
+           tool_offset.v},
+          {(traj.axis_mask & 256) != 0, "W", traj.position.w,
+           traj.actualPosition.w, traj.dtg.w, g5x_offset.w, g92_offset.w,
+           tool_offset.w}};
 
+      const double t = -emc.status().task.rotation_xy * RAD_PER_DEG;
+      const double rot_sin = sin(t);
+      const double rot_cos = cos(t);
       for (const auto& axis : axis_values) {
         if (axis.active) {
           ImGui::TableNextRow();
           ImGui::TableNextColumn();
           ImGui::TextUnformatted(axis.label);
           ImGui::TableNextColumn();
+          double pos = position_display_actual ? axis.act : axis.cmd;
+          pos -= (axis.g5x_ofs + axis.tool_ofs);
+
+          // deal with XY rotation
+          if (&axis == &axis_values[0]) {
+            const auto& y = axis_values[1];
+            pos = pos * rot_cos + ((position_display_actual ? y.act : y.cmd) -
+                                   y.g5x_ofs - y.tool_ofs) *
+                                      rot_sin;
+          }
+          if (&axis == &axis_values[1]) {
+            const auto& x = axis_values[0];
+            pos = pos * rot_cos + ((position_display_actual ? x.act : x.cmd) -
+                                   x.g5x_ofs - x.tool_ofs) *
+                                      rot_sin;
+          }
+
+          pos -= axis.g92_ofs;
+
           if (position_display_metric) {
             char buf[16];
             snprintf(buf, sizeof(buf), format_metric,
