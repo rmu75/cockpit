@@ -26,8 +26,6 @@
 #include "emcglb.h"   // EMC_NMLFILE, TRAJ_MAX_VELOCITY, etc.
 #include "inifile.hh" // INIFILE
 #include "posemath.h" // PM_POSE, TO_RAD
-#include "rcs.hh"
-#include "rcs_print.hh"
 #include "shcom.hh"
 
 namespace ImCNC {
@@ -45,7 +43,7 @@ int init(int argc, char* argv[])
 {
   // process command line args
   if (emcGetArgs(argc, argv) != 0) {
-    rcs_print_error("error in argument list\n");
+    std::cerr << "error in argument list\n";
     exit(1);
   }
 
@@ -53,7 +51,7 @@ int init(int argc, char* argv[])
   emc.ini_load(emc_inifile);
   // init NML
   if (emc.try_nml() != 0) {
-    rcs_print_error("can't connect to emc\n");
+    std::cerr << "can't connect tom emc\n";
     // thisQuit();
     exit(1);
   }
