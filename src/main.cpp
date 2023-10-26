@@ -238,6 +238,8 @@ int main(int argc, char* argv[])
   io.Fonts->AddFontFromFileTTF(
       "/usr/share/fonts/opentype/b612/B612-Regular.otf", 48, nullptr,
       ranges.Data);
+  io.Fonts->AddFontFromFileTTF("/usr/share/fonts/opentype/b612/B612-Bold.otf",
+                               18, nullptr, ranges.Data);
 
   // remap slashed zero to zero
   io.Fonts->Build();
