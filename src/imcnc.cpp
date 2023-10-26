@@ -5,10 +5,12 @@
  */
 
 // clang-format off
+#include <array>
 #include <signal.h>
 #include <fstream>
 #include <streambuf>
 #include <iostream>
+#include <ranges>
 #include <string>
 
 #include "imgui.h"
@@ -32,7 +34,10 @@ namespace ImCNC {
 
 int quitting = 0;
 
-static void sigQuit(int sig) { quitting = 1; }
+static void sigQuit(int sig)
+{
+  quitting = 1;
+}
 
 ShCom emc;
 
@@ -56,6 +61,7 @@ int init(int argc, char* argv[])
   // so as not to interfere with real operator interface
   emc.update_status();
   // emcCommandSerialNumber = emc.status().echo_serial_number;
+  emc.ini_load(emc.status().task.ini_filename);
 
   // attach our quit function to SIGINT
   signal(SIGTERM, sigQuit);
@@ -828,6 +834,12 @@ void RightJustifiedText(const char* text)
   ImGui::Text("%s", text);
 }
 
+// constexpr const char* g5x_names[] = {"G54", "G55",   "G56",   "G57",  "G58",
+//                                     "G59", "G59.1", "G59.2", "G59.3"};
+
+constexpr const auto g5x_names = std::to_array(
+    {"G54", "G55", "G56", "G57", "G58", "G59", "G59.1", "G59.2", "G59.3"});
+
 void ShowStatusWindow()
 {
   emc.update_status();
@@ -838,9 +850,6 @@ void ShowStatusWindow()
 
   bool position_display_metric = true;
   bool position_display_actual = true;
-
-  constexpr const char* g5x_names[] = {"G54", "G55",   "G56",   "G57",
-                                       "G58", "G59.1", "G59.2", "G59.3"};
 
   if (ImGui::Begin("Status Window")) {
     ImGui::BeginChild("ch1",
@@ -1066,6 +1075,45 @@ void ShowGCodeWindow()
 
     editor.Render("GCode");
   }
+  ImGui::End();
+}
+
+void ShowWCSWindow()
+{
+  static std::array<EmcPose, 9> offsets;
+  ImGuiIO& io = ImGui::GetIO();
+  auto axis_mask = emc.status().motion.traj.axis_mask;
+
+  if (ImGui::Begin("Work coordinate systems")) {
+    for (auto i : std::views::iota(0ul, offsets.size())) {
+      // if (i % 3)
+      //  ImGui::SameLine();
+      ImGui::BeginGroup();
+      ImGui::PushFont(io.Fonts->Fonts[5]);
+      ImGui::TextUnformatted(g5x_names[i]);
+      ImGui::PopFont();
+      if (axis_mask & 1)
+        ImGui::InputDouble("X", &offsets[i].tran.x, 0, 0, "%.3f");
+      if (axis_mask & 2)
+        ImGui::InputDouble("Y", &offsets[i].tran.y, 0, 0, "%.3f");
+      if (axis_mask & 4)
+        ImGui::InputDouble("Z", &offsets[i].tran.z, 0, 0, "%.3f");
+      if (axis_mask & 8)
+        ImGui::InputDouble("A", &offsets[i].a, 0, 0, "%.3f");
+      if (axis_mask & 16)
+        ImGui::InputDouble("B", &offsets[i].a, 0, 0, "%.3f");
+      if (axis_mask & 32)
+        ImGui::InputDouble("C", &offsets[i].a, 0, 0, "%.3f");
+      if (axis_mask & 64)
+        ImGui::InputDouble("U", &offsets[i].a, 0, 0, "%.3f");
+      if (axis_mask & 128)
+        ImGui::InputDouble("V", &offsets[i].a, 0, 0, "%.3f");
+      if (axis_mask & 256)
+        ImGui::InputDouble("W", &offsets[i].a, 0, 0, "%.3f");
+      ImGui::EndGroup();
+    }
+  }
+
   ImGui::End();
 }
 
