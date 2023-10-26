@@ -942,15 +942,12 @@ void ShowStatusWindow()
 
           if (position_display_metric) {
             char buf[16];
-            snprintf(buf, sizeof(buf), format_metric,
-                     position_display_actual ? axis.act : axis.cmd);
+            snprintf(buf, sizeof(buf), format_metric, pos);
             RightJustifiedText(buf);
           }
           else {
             char buf[16];
-            snprintf(buf, sizeof(buf), format_imperial,
-                     (position_display_actual ? axis.act : axis.cmd) *
-                         INCH_PER_MM);
+            snprintf(buf, sizeof(buf), format_imperial, pos * INCH_PER_MM);
             RightJustifiedText(buf);
           }
           ImGui::PushStyleColor(ImGuiCol_Text, color3);
