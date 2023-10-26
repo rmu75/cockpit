@@ -10,6 +10,11 @@ add_executable(${EXEC_NAME} ${cockpit_src})
 target_include_directories(cockpit PUBLIC include/)
 target_compile_definitions(cockpit PUBLIC ULAPI)
 
+set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++20")
+set(CMAKE_BUILD_TYPE debug)
+
 #add_subdirectory(src)
 
 # set(CPACK_PROJECT_NAME ${PROJECT_NAME})
