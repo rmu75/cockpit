@@ -982,6 +982,14 @@ int ShCom::ini_load(const char* filename)
     // not found, leave default alone
   }
 
+  if (nullptr != (inistring = inifile.Find("EMCIO", "TOOL_TABLE"))) {
+    m_tool_table_filename = inistring;
+  }
+
+  if (nullptr != (inistring = inifile.Find("RS274NGC", "PARAMETER_FILE"))) {
+    m_parameter_filename = inistring;
+  }
+
   // close it
   inifile.Close();
 

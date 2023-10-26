@@ -154,6 +154,9 @@ private:
 
   // the NML channel for errors
   std::unique_ptr<NML> m_emc_error_buffer;
+
+  std::string m_parameter_filename;
+  std::string m_tool_table_filename;
 };
 
 extern std::string error_string;
