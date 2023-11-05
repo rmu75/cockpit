@@ -246,9 +246,8 @@ void ShowWindow()
     ImGui::Text("cycle time: %f", traj.cycleTime);
     ImGui::Text("axis mask: %d", traj.axis_mask);
     ImGui::Text("joints: %d", traj.joints);
-    ImGui::Text("mode: %s", (traj.mode == EMC_TRAJ_MODE_ENUM::EMC_TRAJ_MODE_FREE
-                                 ? "free"
-                                 : "teleop"));
+    ImGui::Text("mode: %s",
+                (traj.mode == EMC_TRAJ_MODE::FREE ? "free" : "teleop"));
     ImGui::Text("kinematics type: %s", kinematics_type[traj.kinematics_type]);
     ImGui::Text("scale: %f", traj.scale);
     ImGui::Text("rapid scale: %f", traj.rapid_scale);
@@ -581,73 +580,73 @@ void ShowWindow()
     const auto& task = emc.status().task;
 
     switch (task.mode) {
-    case EMC_TASK_MODE_ENUM::EMC_TASK_MODE_AUTO:
+    case EMC_TASK_MODE::AUTO:
       mode = "AUTO";
       break;
-    case EMC_TASK_MODE_ENUM::EMC_TASK_MODE_MANUAL:
+    case EMC_TASK_MODE::MANUAL:
       mode = "MANUAL";
       break;
-    case EMC_TASK_MODE_ENUM::EMC_TASK_MODE_MDI:
+    case EMC_TASK_MODE::MDI:
       mode = "MDI";
       break;
     }
 
     switch (task.state) {
-    case EMC_TASK_STATE_ENUM::EMC_TASK_STATE_ESTOP:
+    case EMC_TASK_STATE::ESTOP:
       state = "ESTOP";
       break;
-    case EMC_TASK_STATE_ENUM::EMC_TASK_STATE_ESTOP_RESET:
+    case EMC_TASK_STATE::ESTOP_RESET:
       state = "ESTOP_RESET";
       break;
-    case EMC_TASK_STATE_ENUM::EMC_TASK_STATE_OFF:
+    case EMC_TASK_STATE::OFF:
       state = "OFF";
       break;
-    case EMC_TASK_STATE_ENUM::EMC_TASK_STATE_ON:
+    case EMC_TASK_STATE::ON:
       state = "ON";
       break;
     }
 
     switch (task.execState) {
-    case EMC_TASK_EXEC_DONE:
+    case EMC_TASK_EXEC::DONE:
       execState = "done";
       break;
-    case EMC_TASK_EXEC_ERROR:
+    case EMC_TASK_EXEC::ERROR:
       execState = "error";
       break;
-    case EMC_TASK_EXEC_WAITING_FOR_IO:
+    case EMC_TASK_EXEC::WAITING_FOR_IO:
       execState = "waiting for I/O";
       break;
-    case EMC_TASK_EXEC_WAITING_FOR_DELAY:
+    case EMC_TASK_EXEC::WAITING_FOR_DELAY:
       execState = "waiting for delay";
       break;
-    case EMC_TASK_EXEC_WAITING_FOR_MOTION:
+    case EMC_TASK_EXEC::WAITING_FOR_MOTION:
       execState = "waiting for motion";
       break;
-    case EMC_TASK_EXEC_WAITING_FOR_SYSTEM_CMD:
+    case EMC_TASK_EXEC::WAITING_FOR_SYSTEM_CMD:
       execState = "waiting for system command";
       break;
-    case EMC_TASK_EXEC_WAITING_FOR_MOTION_QUEUE:
+    case EMC_TASK_EXEC::WAITING_FOR_MOTION_QUEUE:
       execState = "waiting for motion queue";
       break;
-    case EMC_TASK_EXEC_WAITING_FOR_MOTION_AND_IO:
+    case EMC_TASK_EXEC::WAITING_FOR_MOTION_AND_IO:
       execState = "waiting for motion and I/O";
       break;
-    case EMC_TASK_EXEC_WAITING_FOR_SPINDLE_ORIENTED:
+    case EMC_TASK_EXEC::WAITING_FOR_SPINDLE_ORIENTED:
       execState = "waiting for motion and spindle oriented";
       break;
     }
 
     switch (task.interpState) {
-    case EMC_TASK_INTERP_IDLE:
+    case EMC_TASK_INTERP::IDLE:
       interpState = "idle";
       break;
-    case EMC_TASK_INTERP_PAUSED:
+    case EMC_TASK_INTERP::PAUSED:
       interpState = "paused";
       break;
-    case EMC_TASK_INTERP_READING:
+    case EMC_TASK_INTERP::READING:
       interpState = "reading";
       break;
-    case EMC_TASK_INTERP_WAITING:
+    case EMC_TASK_INTERP::WAITING:
       interpState = "waiting";
       break;
     }
@@ -774,8 +773,6 @@ void ShowWindow()
     ImGui::Text("DTG: %f", traj.distance_to_go);
     ImGui::Text("X %9.3f Y %9.3f Z %9.3f", traj.actualPosition.tran.x,
                 traj.actualPosition.tran.y, traj.actualPosition.tran.z);
-
-    ImGui::Text("%d %s:%d", traj.line, traj.source_file, traj.source_line);
 
     ImGui::Text("task.execState %d", emc.status().task.execState);
     ImGui::Text("line %d interpState %d", emc.status().task.motionLine,

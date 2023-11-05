@@ -120,6 +120,7 @@ int ShCom::try_nml(double retry_time, double retry_interval)
         esleep(retry_interval);
         end -= retry_interval;
       } while (end > 0.0);
+      printf("good %d\n", good);
       return good;
     }
   };
@@ -243,11 +244,11 @@ int ShCom::emc_command_wait_done()
       return 0;
     }
 
-    if (status().status == RCS_DONE) {
+    if (status().status == RCS_STATUS::DONE) {
       return 0;
     }
 
-    if (status().status == RCS_ERROR) {
+    if (status().status == RCS_STATUS::ERROR) {
       return -1;
     }
 
@@ -393,7 +394,7 @@ int ShCom::send_ESTOP()
 {
   EMC_TASK_SET_STATE state_msg;
 
-  state_msg.state = EMC_TASK_STATE_ESTOP;
+  state_msg.state = EMC_TASK_STATE::ESTOP;
   return emc_command_send_and_wait(state_msg);
 }
 
@@ -401,7 +402,7 @@ int ShCom::send_ESTOP_reset()
 {
   EMC_TASK_SET_STATE state_msg;
 
-  state_msg.state = EMC_TASK_STATE_ESTOP_RESET;
+  state_msg.state = EMC_TASK_STATE::ESTOP_RESET;
   return emc_command_send_and_wait(state_msg);
 }
 
@@ -409,7 +410,7 @@ int ShCom::send_machine_on()
 {
   EMC_TASK_SET_STATE state_msg;
 
-  state_msg.state = EMC_TASK_STATE_ON;
+  state_msg.state = EMC_TASK_STATE::ON;
   return emc_command_send_and_wait(state_msg);
 }
 
@@ -417,7 +418,7 @@ int ShCom::send_machhine_off()
 {
   EMC_TASK_SET_STATE state_msg;
 
-  state_msg.state = EMC_TASK_STATE_OFF;
+  state_msg.state = EMC_TASK_STATE::OFF;
   return emc_command_send_and_wait(state_msg);
 }
 
@@ -425,7 +426,7 @@ int ShCom::send_manual()
 {
   EMC_TASK_SET_MODE mode_msg;
 
-  mode_msg.mode = EMC_TASK_MODE_MANUAL;
+  mode_msg.mode = EMC_TASK_MODE::MANUAL;
   return emc_command_send_and_wait(mode_msg);
 }
 
@@ -433,7 +434,7 @@ int ShCom::send_auto()
 {
   EMC_TASK_SET_MODE mode_msg;
 
-  mode_msg.mode = EMC_TASK_MODE_AUTO;
+  mode_msg.mode = EMC_TASK_MODE::AUTO;
   return emc_command_send_and_wait(mode_msg);
 }
 
@@ -441,7 +442,7 @@ int ShCom::send_mdi()
 {
   EMC_TASK_SET_MODE mode_msg;
 
-  mode_msg.mode = EMC_TASK_MODE_MDI;
+  mode_msg.mode = EMC_TASK_MODE::MDI;
   return emc_command_send_and_wait(mode_msg);
 }
 
@@ -458,9 +459,9 @@ int ShCom::send_jog_stop(int ja, int jjogmode)
   EMC_JOG_STOP emc_jog_stop_msg;
 
   if (((jjogmode == JOGJOINT) &&
-       (status().motion.traj.mode == EMC_TRAJ_MODE_TELEOP)) ||
+       (status().motion.traj.mode == EMC_TRAJ_MODE::TELEOP)) ||
       ((jjogmode == JOGTELEOP) &&
-       (status().motion.traj.mode != EMC_TRAJ_MODE_TELEOP)))
+       (status().motion.traj.mode != EMC_TRAJ_MODE::TELEOP)))
   {
     return -1;
   }
@@ -484,13 +485,13 @@ int ShCom::send_jog_cont(int ja, int jjogmode, double speed)
 {
   EMC_JOG_CONT emc_jog_cont_msg;
 
-  if (status().task.state != EMC_TASK_STATE_ON) {
+  if (status().task.state != EMC_TASK_STATE::ON) {
     return -1;
   }
   if (((jjogmode == JOGJOINT) &&
-       (status().motion.traj.mode == EMC_TRAJ_MODE_TELEOP)) ||
+       (status().motion.traj.mode == EMC_TRAJ_MODE::TELEOP)) ||
       ((jjogmode == JOGTELEOP) &&
-       (status().motion.traj.mode != EMC_TRAJ_MODE_TELEOP)))
+       (status().motion.traj.mode != EMC_TRAJ_MODE::TELEOP)))
   {
     return -1;
   }
@@ -517,13 +518,13 @@ int ShCom::send_jog_incr(int ja, int jjogmode, double speed, double incr)
 {
   EMC_JOG_INCR emc_jog_incr_msg;
 
-  if (status().task.state != EMC_TASK_STATE_ON) {
+  if (status().task.state != EMC_TASK_STATE::ON) {
     return -1;
   }
   if (((jjogmode == JOGJOINT) &&
-       (status().motion.traj.mode == EMC_TRAJ_MODE_TELEOP)) ||
+       (status().motion.traj.mode == EMC_TRAJ_MODE::TELEOP)) ||
       ((jjogmode == JOGTELEOP) &&
-       (status().motion.traj.mode != EMC_TRAJ_MODE_TELEOP)))
+       (status().motion.traj.mode != EMC_TRAJ_MODE::TELEOP)))
   {
     return -1;
   }
@@ -577,16 +578,18 @@ int ShCom::send_flood_off()
 
 int ShCom::send_lube_on()
 {
-  EMC_LUBE_ON emc_lube_on_msg;
+  // EMC_LUBE_ON emc_lube_on_msg;
 
-  return emc_command_send_and_wait(emc_lube_on_msg);
+  // return emc_command_send_and_wait(emc_lube_on_msg);
+  return 0;
 }
 
 int ShCom::send_lube_off()
 {
-  EMC_LUBE_OFF emc_lube_off_msg;
+  // EMC_LUBE_OFF emc_lube_off_msg;
 
-  return emc_command_send_and_wait(emc_lube_off_msg);
+  // return emc_command_send_and_wait(emc_lube_off_msg);
+  return 0;
 }
 
 int ShCom::send_spindle_forward(int spindle)
@@ -853,6 +856,7 @@ int ShCom::send_joint_set_backlash(int joint, double backlash)
 
 int ShCom::send_joint_enable(int joint, int val)
 {
+  /*
   EMC_JOINT_ENABLE emc_joint_enable_msg;
   EMC_JOINT_DISABLE emc_joint_disable_msg;
 
@@ -864,6 +868,8 @@ int ShCom::send_joint_enable(int joint, int val)
     emc_joint_disable_msg.joint = joint;
     return emc_command_send_and_wait(emc_joint_disable_msg);
   }
+  */
+  return 0;
 }
 
 int ShCom::send_joint_load_comp(int joint, const char* file, int type)
