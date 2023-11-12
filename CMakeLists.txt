@@ -77,7 +77,7 @@ target_include_directories(${EXEC_NAME} PUBLIC ${imgui_color_text_edit_dir})
 # tbd
 
 # linuxcnc
-set(linuxcnc_dir ${CMAKE_CURRENT_SOURCE_DIR}/../linuxcnc)
+set(linuxcnc_dir ${CMAKE_CURRENT_SOURCE_DIR}/../linuxcnc-rs-zmq-experiments)
 target_include_directories(cockpit PUBLIC ${linuxcnc_dir}/include)
 target_link_directories(cockpit PUBLIC ${linuxcnc_dir}/lib)
 target_link_libraries(cockpit nml linuxcnchal linuxcnc linuxcncini tirpc)
@@ -122,3 +122,11 @@ target_link_libraries(imgui_vtk_viewer gl3w) # Since gl3w was compiled as a stat
 target_link_libraries(imgui_vtk_viewer imgui) # Since imgui was compiled as a static library, we need to link to it
 target_link_libraries(imgui_vtk_viewer ${VTK_LIBRARIES})
 target_link_libraries(${EXEC_NAME} imgui_vtk_viewer)
+
+# flatbuffers
+find_package(Flatbuffers)
+
+# 0mq
+#find_package(zmq)
+
+target_link_libraries(${EXEC_NAME} zmq zmqpp)
