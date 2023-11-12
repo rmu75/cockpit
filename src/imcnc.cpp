@@ -19,6 +19,10 @@
 
 #define TOOL_NML
 
+#include "../flatbuf/emc_cmd_generated.h"
+#include "../flatbuf/emc_common_generated.h"
+#include "../flatbuf/emc_error_generated.h"
+#include "../flatbuf/emc_stat_generated.h"
 #include "canon.hh"   // CANON_UNITS, CANON_UNITS_INCHES,MM,CM
 #include "config.h"   // Standard path definitions
 #include "emc.hh"     // EMC NML
@@ -27,17 +31,15 @@
 #include "inifile.hh" // INIFILE
 #include "posemath.h" // PM_POSE, TO_RAD
 #include "shcom.hh"
+#include "zmqcom.hh"
 
 namespace ImCNC {
 
 int quitting = 0;
-
-static void sigQuit(int sig)
-{
-  quitting = 1;
-}
+static void sigQuit(int sig) { quitting = 1; }
 
 ShCom emc;
+ZMQCom emc0;
 
 int init(int argc, char* argv[])
 {
@@ -63,6 +65,8 @@ int init(int argc, char* argv[])
 
   // attach our quit function to SIGINT
   signal(SIGTERM, sigQuit);
+
+  emc0.init();
 
   return 0;
 }
@@ -276,6 +280,20 @@ void ShowWindow()
       ImGui::Text("probing");
     if (traj.probe_tripped)
       ImGui::Text("probe tripped");
+  }
+  ImGui::End();
+
+  if (ImGui::Begin("ZMQStatus")) {
+    /*
+    std::string s;
+    zmq::message_t msg;
+    ImGui::Text("connected: %d", static_cast<bool>(status_socket));
+    auto res = status_socket->recv(msg, zmq::recv_flags::dontwait);
+    if (res.has_value())
+      ImGui::Text("result %d", res.value());
+    zmq::recv_result_t r;
+    ImGui::TextUnformatted(static_cast<char*>(msg.data()));
+    */
   }
   ImGui::End();
 
@@ -568,7 +586,7 @@ void ShowWindow()
     ImGui::Text("speed: %f", traj.tag.fields_float[2]);
     ImGui::Text("path tolerance: %f", traj.tag.fields_float[3]);
     ImGui::Text("naive CAM tolerance: %f", traj.tag.fields_float[4]);
-    ImGui::Text("filename %s", traj.tag.filename);
+    // ImGui::Text("filename %s", traj.tag.filename);
   }
   ImGui::End();
 
@@ -810,6 +828,31 @@ void ShowWindow()
   }
   ImGui::End();
 
+  if (ImGui::Begin("0MQ Commands")) {
+    if (ImGui::Button("Abort")) {
+      emc0.send_abort();
+    }
+    if (ImGui::Button("ESTOP")) {
+      emc0.send_ESTOP();
+    }
+    if (ImGui::Button("ESTOP Reset")) {
+      emc0.send_ESTOP_reset();
+    }
+    if (ImGui::Button("ON")) {
+      emc0.send_machine_on();
+    }
+    if (ImGui::Button("OFF")) {
+      emc0.send_machine_off();
+    }
+    if (ImGui::Button("Manual")) {
+    }
+    if (ImGui::Button("Auto")) {
+    }
+    if (ImGui::Button("MDI")) {
+    }
+  }
+  ImGui::End();
+
   // if (ImGui::Begin("VTK")) {
 
   // }
@@ -987,10 +1030,10 @@ void ShowStatusWindow()
       ImGui::TableNextColumn();
       ImGui::Text("%d", emc.status().io.tool.toolInSpindle);
       ImGui::PopFont();
-      // auto& tool = emc.status().io.tool.toolTablecurrent
+      // auto& tool = emcStatus->io.tool.toolTablecurrent
       ImGui::TableNextColumn();
       // auto& tool =
-      // emc.status().io.tool.toolTable[emc.status().io.tool.toolInSpindle];
+      // emcStatus->io.tool.toolTable[emcStatus->io.tool.toolInSpindle];
       auto& tool = emc.status().io.tool.toolTable[0];
 
       ImGui::Text("D %.3fmm", tool.diameter);
