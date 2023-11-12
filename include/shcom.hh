@@ -81,7 +81,7 @@ public:
   int send_ESTOP();
   int send_ESTOP_reset();
   int send_machine_on();
-  int send_machhine_off();
+  int send_machine_off();
   int send_manual();
   int send_auto();
   int send_mdi();

@@ -414,7 +414,7 @@ int ShCom::send_machine_on()
   return emc_command_send_and_wait(state_msg);
 }
 
-int ShCom::send_machhine_off()
+int ShCom::send_machine_off()
 {
   EMC_TASK_SET_STATE state_msg;
 

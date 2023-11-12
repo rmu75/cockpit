@@ -792,7 +792,7 @@ void ShowWindow()
       emc.send_machine_on();
     }
     if (ImGui::Button("OFF")) {
-      emc.send_machhine_off();
+      emc.send_machine_off();
     }
     if (ImGui::Button("Manual")) {
       emc.send_manual();
