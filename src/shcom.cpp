@@ -226,7 +226,7 @@ int ShCom::update_error()
   return 0;
 }
 
-#define EMC_COMMAND_DELAY 0.1 // how long to sleep between checks
+#define EMC_COMMAND_DELAY 0.001 // how long to sleep between checks
 
 int ShCom::emc_command_wait_done()
 {
