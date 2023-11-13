@@ -115,6 +115,8 @@ int main(int argc, char* argv[])
   ImCNC::init(argc, argv);
   ImCNC::initHAL();
 
+  glfwInitHint(GLFW_PLATFORM, GLFW_PLATFORM_WAYLAND);
+
   // Setup window
   glfwSetErrorCallback(glfw_error_callback);
   if (!glfwInit())
@@ -160,8 +162,9 @@ int main(int argc, char* argv[])
   io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad; // Enable Gamepad
   // Controls
   io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;   // Enable Docking
-  io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable; // Enable
-  // Multi-Viewport / Platform Windows io.ConfigViewportsNoAutoMerge = true;
+  // this doesn't work (reliably) on wayland / xwayland
+  // io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable; 
+  // Enable Multi-Viewport / Platform Windows io.ConfigViewportsNoAutoMerge = true;
   // io.ConfigViewportsNoTaskBarIcon = true;
 
   // Setup Dear ImGui style
