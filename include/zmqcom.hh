@@ -18,6 +18,7 @@
 class EMC_STAT;
 namespace flatbuffers { class FlatBufferBuilder; }
 namespace zmq { class socket_t; }
+namespace EMC { class EmcStatT; }
 
 class ZMQCom
 {
@@ -44,10 +45,12 @@ public:
   ZMQCom();
   ~ZMQCom();
 
-  EMC_STAT& status();
-  const EMC_STAT& status() const;
+  EMC::EmcStatT& status();
+  const EMC::EmcStatT& status() const;
 
   void init();
+  int update_status();
+  int update_error();
 
   int emc_command_wait_received();
   int emc_command_wait_done();
@@ -112,7 +115,12 @@ public:
   int ini_load(const char* filename);
 
 private:
-  void _send_task_set_state(EMC_TASK_STATE state);
+  int _send_task_set_state(EMC_TASK_STATE state);
+  int _send_task_set_mode(EMC_TASK_MODE mode);
+  template <typename s>
+  int _send_simple_command();
+  template <typename s, class... Args>
+  int _send_command(Args&&... args);
   LINEAR_UNIT_CONVERSION m_linear_unit_conversion;
   ANGULAR_UNIT_CONVERSION m_angular_unit_conversion;
 
@@ -122,4 +130,5 @@ private:
   std::unique_ptr<zmq::socket_t> command_socket;
   std::unique_ptr<zmq::socket_t> error_socket;
   std::unique_ptr<zmq::socket_t> status_socket;
+  std::unique_ptr<EMC::EmcStatT> m_status;
 };
