@@ -10,6 +10,7 @@ add_executable(${EXEC_NAME} ${cockpit_src})
 target_include_directories(cockpit PUBLIC include/)
 target_compile_definitions(cockpit PUBLIC ULAPI)
 
+set(GLFW_BUILD_WAYLAND ON)
 #add_subdirectory(src)
 
 # set(CPACK_PROJECT_NAME ${PROJECT_NAME})
