@@ -283,7 +283,15 @@ void ShowWindow()
   }
   ImGui::End();
 
+  emc0.update_status();
   if (ImGui::Begin("ZMQStatus")) {
+    const auto& status = emc0.status();
+
+    ImGui::Text("STATUS");
+    if (status.task) {
+      ImGui::Text("Task State: %d %d", status.task->mode, status.task->state);
+      ImGui::Text("file %s %d", status.task->filename.c_str(), status.task->motion_line);
+    }
     /*
     std::string s;
     zmq::message_t msg;
