@@ -57,10 +57,9 @@ int ZMQCom::update_status()
   zmq::message_t msg, msg2;
   auto res = status_socket->recv(msg2, zmq::recv_flags::dontwait);
   if (res.has_value()) {
-    int i = 0;
+    // eat queued messages, keep last
     while (res.has_value()) {
       msg.swap(msg2);
-      i++;
       res = status_socket->recv(msg2, zmq::recv_flags::dontwait);
     }
 
@@ -104,6 +103,13 @@ int ZMQCom::_send_task_set_mode(EMC_TASK_MODE mode)
 template <typename s>
 int ZMQCom::_send_simple_command()
 {
+  flatbuffers::FlatBufferBuilder fbb;
+  //auto cmd = fbb.CreateStruct(s(std::forward<Args>(args)...));
+  auto msg = EMC::CmdChannelMsgBuilder(fbb);
+  //msg.add_command(cmd.Union());
+  msg.add_command_type(EMC::CommandTraits<s>::enum_value);
+  fbb.Finish(msg.Finish());
+  return emc_command_send(fbb);
   return _send_command<s>();
 }
 
@@ -114,7 +120,7 @@ int ZMQCom::_send_command(Args&&... args)
   auto cmd = fbb.CreateStruct(s(std::forward<Args>(args)...));
   auto msg = EMC::CmdChannelMsgBuilder(fbb);
   msg.add_command(cmd.Union());
-  msg.add_command_type(EMC::Command_task_set_state);
+  msg.add_command_type(EMC::CommandTraits<s>::enum_value);
   fbb.Finish(msg.Finish());
   return emc_command_send(fbb);
 }
