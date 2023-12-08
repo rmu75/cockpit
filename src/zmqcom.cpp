@@ -42,7 +42,7 @@ void ZMQCom::init()
   status_socket->set(zmq::sockopt::rcvhwm, 100);
   // only keep last status update
   // att, conflate is not compatible with subscription filters
-  //status_socket->set(zmq::sockopt::conflate, 1);
+  // status_socket->set(zmq::sockopt::conflate, 1);
   m_status = std::make_unique<EMC::EmcStatT>();
 
   error_socket =
@@ -63,7 +63,7 @@ int ZMQCom::update_status()
       res = status_socket->recv(msg2, zmq::recv_flags::dontwait);
     }
 
-    //std::cerr << "received status " << i << std::endl;
+    // std::cerr << "received status " << i << std::endl;
     auto status = EMC::GetEmcStat(msg.data());
     m_status = std::unique_ptr<EMC::EmcStatT>(status->UnPack());
   }
@@ -103,10 +103,9 @@ int ZMQCom::_send_task_set_mode(EMC_TASK_MODE mode)
 template <typename s>
 int ZMQCom::_send_simple_command()
 {
+  // no argument -> only send union type field
   flatbuffers::FlatBufferBuilder fbb;
-  //auto cmd = fbb.CreateStruct(s(std::forward<Args>(args)...));
   auto msg = EMC::CmdChannelMsgBuilder(fbb);
-  //msg.add_command(cmd.Union());
   msg.add_command_type(EMC::CommandTraits<s>::enum_value);
   fbb.Finish(msg.Finish());
   return emc_command_send(fbb);
@@ -248,14 +247,35 @@ int ZMQCom::send_feed_override(double override)
 {
   return _send_command<EMC::TrajSetScale>(override);
 }
-int ZMQCom::send_rapid_override(double override) { return -1; }
-int ZMQCom::send_spindle_override(int spindle, double override) { return -1; }
+
+int ZMQCom::send_rapid_override(double override)
+{
+  return _send_command<EMC::TrajSetRapidScale>(override);
+}
+
+int ZMQCom::send_spindle_override(int spindle, double override)
+{
+  return _send_command<EMC::TrajSetSpindleScale>(spindle, override);
+}
 
 int ZMQCom::send_task_plan_init() { return _send_command<EMC::TaskPlanInit>(); }
 
-int ZMQCom::send_program_open(char* program) { return -1; }
-int ZMQCom::send_program_run(int line) { return -1; }
-int ZMQCom::send_program_pause() { return -1; }
+int ZMQCom::send_program_open(char* program)
+{
+  flatbuffers::FlatBufferBuilder fbb;
+  auto cmd = EMC::CreateTaskPlanOpenDirect(fbb, program);
+  auto msg = EMC::CmdChannelMsgBuilder(fbb);
+  msg.add_command(cmd.Union());
+  msg.add_command_type(EMC::Command_task_plan_open);
+  fbb.Finish(msg.Finish());
+  return emc_command_send(fbb);
+}
+int ZMQCom::send_program_run(int line)
+{
+  return _send_command<EMC::TaskPlanRun>(line);
+}
+
+int ZMQCom::send_program_pause() { return _send_command<EMC::TaskPlanPause>(); }
 
 int ZMQCom::send_program_resume()
 {
@@ -269,20 +289,43 @@ int ZMQCom::send_set_optional_stop(bool state)
 
 int ZMQCom::send_program_step() { return _send_command<EMC::TaskPlanStep>(); }
 
-int ZMQCom::send_mdi_cmd(const char* mdi) { return -1; }
+int ZMQCom::send_mdi_cmd(const char* mdi)
+{
+  flatbuffers::FlatBufferBuilder fbb;
+  auto cmd = EMC::CreateTaskPlanExecuteDirect(fbb, mdi);
+  auto msg = EMC::CmdChannelMsgBuilder(fbb);
+  msg.add_command(cmd.Union());
+  msg.add_command_type(EMC::Command_task_plan_execute);
+  fbb.Finish(msg.Finish());
+  return emc_command_send(fbb);
+}
 
-int ZMQCom::send_load_tool_table(const char* file) { return -1; }
+int ZMQCom::send_load_tool_table(const char* file)
+{
+  flatbuffers::FlatBufferBuilder fbb;
+  auto cmd = EMC::CreateToolLoadToolTableDirect(fbb, file);
+  auto msg = EMC::CmdChannelMsgBuilder(fbb);
+  msg.add_command(cmd.Union());
+  msg.add_command_type(EMC::Command_tool_load_tool_table);
+  fbb.Finish(msg.Finish());
+  return emc_command_send(fbb);
+}
 
 int ZMQCom::send_tool_set_offset(int toolno, double zoffset, double diameter)
 {
-  return -1;
+  auto NaN = std::numeric_limits<double>::quiet_NaN();
+  return send_tool_set_offset(toolno, zoffset, NaN, diameter, NaN, NaN, 0);
 }
 
 int ZMQCom::send_tool_set_offset(int toolno, double zoffset, double xoffset,
                                  double diameter, double frontangle,
                                  double backangle, int orientation)
 {
-  return -1;
+  auto NaN = std::numeric_limits<double>::quiet_NaN();
+  return _send_command<EMC::ToolSetOffset>(
+      -1, toolno,
+      EMC::Pose(xoffset, NaN, zoffset, NaN, NaN, NaN, NaN, NaN, NaN), diameter,
+      frontangle, backangle, orientation);
 }
 
 int ZMQCom::send_joint_set_backlash(int joint, double backlash)
@@ -294,7 +337,13 @@ int ZMQCom::send_joint_enable(int joint, int val) { return 0; }
 
 int ZMQCom::send_joint_load_comp(int joint, const char* file, int type)
 {
-  return -1;
+  flatbuffers::FlatBufferBuilder fbb;
+  auto cmd = EMC::CreateJointLoadCompDirect(fbb, joint, file, type);
+  auto msg = EMC::CmdChannelMsgBuilder(fbb);
+  msg.add_command(cmd.Union());
+  msg.add_command_type(EMC::Command_tool_load_tool_table);
+  fbb.Finish(msg.Finish());
+  return emc_command_send(fbb);
 }
 
 int ZMQCom::send_set_teleop_enable(int enable)
@@ -313,4 +362,5 @@ int ZMQCom::send_probe(double x, double y, double z)
   return _send_command<EMC::TrajProbe>(pose, 0, 0, 0, 0, 0);
 }
 
-int ZMQCom::ini_load(const char* filename) { return -1; }
+int ZMQCom::ini_load(const char* filename) 
+{}
