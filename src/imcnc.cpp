@@ -290,7 +290,8 @@ void ShowWindow()
     ImGui::Text("STATUS");
     if (status.task) {
       ImGui::Text("Task State: %d %d", status.task->mode, status.task->state);
-      ImGui::Text("file %s %d", status.task->filename.c_str(), status.task->motion_line);
+      ImGui::Text("file %s %d", status.task->filename.c_str(),
+                  status.task->motion_line);
     }
     /*
     std::string s;
@@ -1077,6 +1078,62 @@ void ShowStatusWindow()
   ImGui::End();
 }
 
+const TextEditor::LanguageDefinition& GCode()
+{
+  static bool inited = false;
+  static TextEditor::LanguageDefinition lang_def;
+
+  if (!inited) {
+    // math functions
+    static const char* const math_functions[] = {
+        "sin",  "cos", "tan", "asin", "acos", "atan", "exp", "ln",
+        "sqrt", "fup", "fix", "abs",  "or",   "xor",  "and", "mod",
+        "gt",   "lt",  "ge",  "le",   "eq",   "ne"};
+    for (auto& f : math_functions) {
+      lang_def.mKeywords.insert(f);
+    }
+
+    // G-Codes
+    lang_def.mTokenRegexStrings.push_back(
+        std::make_pair<std::string, TextEditor::PaletteIndex>(
+            "(#[0-9]+)|(#<[a-zA-Z0-9_]+>)",
+            TextEditor::PaletteIndex::Identifier));
+    lang_def.mTokenRegexStrings.push_back(
+        std::make_pair<std::string, TextEditor::PaletteIndex>(
+            "(([-/|\\=\\+\\*])|(\\])|(\\[))",
+            TextEditor::PaletteIndex::Punctuation));
+    lang_def.mTokenRegexStrings.push_back(
+        std::make_pair<std::string, TextEditor::PaletteIndex>(
+            "^[n|N]([ |\t]*[0-9]){1,5}",
+            TextEditor::PaletteIndex::PreprocIdentifier));
+    lang_def.mTokenRegexStrings.push_back(
+        std::make_pair<std::string, TextEditor::PaletteIndex>(
+            "[g|G]([ \t]*[0])*[ \t]*", TextEditor::PaletteIndex::Keyword));
+    lang_def.mTokenRegexStrings.push_back(
+        std::make_pair<std::string, TextEditor::PaletteIndex>(
+            "[m|M]([ \t]*[0])*[ \t]*", TextEditor::PaletteIndex::Keyword));
+    lang_def.mTokenRegexStrings.push_back(
+        std::make_pair<std::string, TextEditor::PaletteIndex>(
+            "[f|F|s|S]([ \t]*[0])*[ \t]*", TextEditor::PaletteIndex::Keyword));
+    lang_def.mTokenRegexStrings.push_back(
+        std::make_pair<std::string, TextEditor::PaletteIndex>(
+            "[t|T|h|H]([ \t]*[0])*[ \t]*", TextEditor::PaletteIndex::Keyword));
+    lang_def.mTokenRegexStrings.push_back(
+        std::make_pair<std::string, TextEditor::PaletteIndex>(
+            "[x|X|y|Y|z|Z|a|A|b|B|c|C|u|U|v|V|w|W|i|I|j|J|k|K|p|P|r|R|l|L][ "
+            "\t]*[+|-]?[ \t]*([ \t]*[0-9]*)*[ \t]*[.]?([ \t]*[0-9]*)*",
+            TextEditor::PaletteIndex::Number));
+    lang_def.mTokenRegexStrings.push_back(
+        std::make_pair<std::string, TextEditor::PaletteIndex>(
+            "^[ \t]*[o|O]([ \t]*[0-9]|<[a-zA-Z0-9_]+>)* ",
+            TextEditor::PaletteIndex::Preprocessor));
+
+    lang_def.mCommentStart = "(";
+    lang_def.mCommentEnd = ")";
+    lang_def.mSingleLineComment = ";";
+  }
+  return lang_def;
+}
 void ShowGCodeWindow()
 {
   static TextEditor editor;
@@ -1097,7 +1154,8 @@ void ShowGCodeWindow()
                           std::istreambuf_iterator<char>());
         editor.SetText(gcode);
         editor.SetReadOnly(true);
-        std::cout << gcode;
+        editor.SetLanguageDefinition(GCode());
+        // std::cout << gcode;
       }
     }
     auto cpos = editor.GetCursorPosition();
