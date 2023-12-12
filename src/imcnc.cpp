@@ -36,7 +36,10 @@
 namespace ImCNC {
 
 int quitting = 0;
-static void sigQuit(int sig) { quitting = 1; }
+static void sigQuit(int sig)
+{
+  quitting = 1;
+}
 
 ShCom emc;
 ZMQCom emc0;
